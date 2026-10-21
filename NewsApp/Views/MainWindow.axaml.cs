@@ -16,11 +16,21 @@ public partial class MainWindow : Window
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (_viewModel is not null) Globe.CountrySelected -= OnCountrySelected;
+        if (_viewModel is not null)
+        {
+            Globe.CountrySelected -= OnCountrySelected;
+            _viewModel.NewCountriesChanged -= OnNewCountriesChanged;
+        }
         _viewModel = DataContext as MainWindowViewModel;
-        if (_viewModel is not null) Globe.CountrySelected += OnCountrySelected;
+        if (_viewModel is not null)
+        {
+            Globe.CountrySelected += OnCountrySelected;
+            _viewModel.NewCountriesChanged += OnNewCountriesChanged;
+        }
     }
 
     private void OnCountrySelected(object? sender, string countryCode) =>
         _viewModel?.SelectCountryCode(countryCode, Globe.SelectedCountryName);
+
+    private void OnNewCountriesChanged(object? sender, IReadOnlySet<string> codes) => Globe.MarkNewCountries(codes);
 }

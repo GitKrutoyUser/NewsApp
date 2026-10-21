@@ -82,6 +82,18 @@ public sealed class NewsRepository
         transaction.Commit();
     }
 
+    public HashSet<string> GetKnownUrls()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT url FROM news;";
+        using var reader = command.ExecuteReader();
+        var urls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (reader.Read()) urls.Add(reader.GetString(0));
+        return urls;
+    }
+
     public IReadOnlyList<NewsArticle> GetNewsByCountry(string countryCode)
     {
         using var connection = new SqliteConnection(_connectionString);

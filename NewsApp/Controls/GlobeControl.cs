@@ -24,11 +24,20 @@ public sealed class GlobeControl : Control
     private bool _moved;
     private double _yaw = -0.55;
     private double _pitch = 0.12;
+    private double _zoom = 1.0;
+    private readonly HashSet<string> _newCountryCodes = new(StringComparer.OrdinalIgnoreCase);
 
     public event EventHandler<string>? CountrySelected;
 
     public string? SelectedCountryCode { get; private set; }
     public string? SelectedCountryName { get; private set; }
+
+    public void MarkNewCountries(IEnumerable<string> codes)
+    {
+        _newCountryCodes.Clear();
+        foreach (var code in codes) _newCountryCodes.Add(code);
+        InvalidateVisual();
+    }
 
     public GlobeControl()
     {
@@ -87,7 +96,7 @@ public sealed class GlobeControl : Control
     public override void Render(DrawingContext context)
     {
         var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
-        var radius = Math.Max(10, Math.Min(Bounds.Width, Bounds.Height) / 2 - 12);
+        var radius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * _zoom);
         var globeRect = new Rect(center.X - radius, center.Y - radius, radius * 2, radius * 2);
         context.DrawEllipse(new SolidColorBrush(Color.Parse("#13253C")), new Pen(new SolidColorBrush(Color.Parse("#3B79AF")), 2), center, radius, radius);
 
@@ -103,6 +112,8 @@ public sealed class GlobeControl : Control
             {
                 var text = new FormattedText(country.Name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 9, Brushes.White);
                 context.DrawText(text, new Point(label.Value.X - text.Width / 2, label.Value.Y - text.Height / 2));
+                if (_newCountryCodes.Contains(country.Code))
+                    context.DrawEllipse(Brushes.OrangeRed, null, new Point(label.Value.X + text.Width / 2 + 6, label.Value.Y), 4, 4);
             }
         }
 
@@ -208,10 +219,18 @@ public sealed class GlobeControl : Control
         base.OnPointerReleased(e);
     }
 
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        _zoom = Math.Clamp(_zoom + e.Delta.Y * 0.12, 0.65, 2.4);
+        InvalidateVisual();
+        e.Handled = true;
+        base.OnPointerWheelChanged(e);
+    }
+
     private string? HitTestCountry(Point screenPoint)
     {
         var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
-        var radius = Math.Max(10, Math.Min(Bounds.Width, Bounds.Height) / 2 - 12);
+        var radius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * _zoom);
         var nx = (screenPoint.X - center.X) / radius;
         var ny = -(screenPoint.Y - center.Y) / radius;
         var squared = nx * nx + ny * ny;

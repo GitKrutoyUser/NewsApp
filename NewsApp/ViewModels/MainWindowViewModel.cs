@@ -11,6 +11,7 @@ namespace NewsApp.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
+    public event EventHandler<IReadOnlySet<string>>? NewCountriesChanged;
     private readonly NewsRepository _repository;
     private readonly NewsService _service;
     private readonly System.Timers.Timer _refreshTimer;
@@ -78,7 +79,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             await SetUiAsync(() => { IsRefreshing = true; StatusText = "Обновляем мировую ленту…"; });
             var news = await _service.FetchNewsAsync(_lifetime.Token);
+            var knownUrls = await Task.Run(() => _repository.GetKnownUrls(), _lifetime.Token);
+            var newCountries = news.Where(x => !knownUrls.Contains(x.Url)).Select(x => x.CountryCode)
+                .Where(x => x != "WORLD").ToHashSet(StringComparer.OrdinalIgnoreCase);
             await Task.Run(() => _repository.SaveNews(news), _lifetime.Token);
+            await SetUiAsync(() =>
+            {
+                foreach (var country in Countries) country.HasNewNews = newCountries.Contains(country.Code);
+                NewCountriesChanged?.Invoke(this, newCountries);
+            });
             await LoadCachedNewsAsync(SelectedCountry.Code);
             await SetUiAsync(() => StatusText = $"Обновлено: {DateTime.Now:HH:mm} · {news.Count} материалов");
         }

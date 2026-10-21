@@ -19,9 +19,16 @@ public partial class NewsArticle : ObservableObject
     private Bitmap? _imageBitmap;
 }
 
-public sealed record Country(string Code, string Name, string Flag)
+public partial class Country : ObservableObject
 {
+    public Country(string code, string name, string flag) { Code = code; Name = name; Flag = flag; }
+    public string Code { get; }
+    public string Name { get; }
+    public string Flag { get; }
+    [ObservableProperty] private bool _hasNewNews;
     public string DisplayName => $"{Flag}  {Name}";
+    public string NewNewsMarker => HasNewNews ? "  ●" : string.Empty;
+    partial void OnHasNewNewsChanged(bool value) => OnPropertyChanged(nameof(NewNewsMarker));
 }
 
 public sealed class NewsApiResponse

@@ -16,6 +16,7 @@ public sealed class GlobeControl : Control
         public string Name { get; init; } = "";
         public List<List<Point>> Polygons { get; } = new();
         public Point LabelPoint { get; set; }
+        public double SizeScore { get; set; }
     }
 
     private readonly List<CountryShape> _countries = new();
@@ -69,6 +70,7 @@ public sealed class GlobeControl : Control
                 {
                     var points = country.Polygons.SelectMany(x => x).ToList();
                     country.LabelPoint = new Point(points.Average(x => x.X), points.Average(x => x.Y));
+                    country.SizeScore = country.Polygons.Max(PolygonAreaScore);
                     _countries.Add(country);
                 }
             }
@@ -108,7 +110,7 @@ public sealed class GlobeControl : Control
             foreach (var polygon in country.Polygons)
                 DrawPolygon(context, polygon, center, radius, fill, pen);
             var label = Project(country.LabelPoint.X, country.LabelPoint.Y, center, radius);
-            if (label is not null && radius > 130)
+            if (label is not null && radius > 130 && ShouldShowLabel(country))
             {
                 var text = new FormattedText(country.Name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 9, Brushes.White);
                 context.DrawText(text, new Point(label.Value.X - text.Width / 2, label.Value.Y - text.Height / 2));
@@ -124,6 +126,23 @@ public sealed class GlobeControl : Control
     {
         var palette = new[] { "#3D7EA6", "#4F8F6A", "#A56B46", "#7A65A8", "#B05D72", "#3F8E89", "#8A7A42", "#A65B8D" };
         return new SolidColorBrush(Color.Parse(palette[Math.Abs(code.GetHashCode()) % palette.Length]));
+    }
+
+    private bool ShouldShowLabel(CountryShape country)
+    {
+        var minimumSize = _zoom < 0.85 ? 1100 : _zoom < 1.25 ? 250 : 18;
+        return country.SizeScore >= minimumSize;
+    }
+
+    private static double PolygonAreaScore(List<Point> polygon)
+    {
+        var area = 0d;
+        for (var i = 0; i < polygon.Count; i++)
+        {
+            var next = (i + 1) % polygon.Count;
+            area += polygon[i].X * polygon[next].Y - polygon[next].X * polygon[i].Y;
+        }
+        return Math.Abs(area) / 2;
     }
 
     private static string RussianName(string code, string fallback) => code.ToUpperInvariant() switch

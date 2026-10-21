@@ -33,6 +33,10 @@ public sealed class NewsRepository
             );
             CREATE INDEX IF NOT EXISTS ix_news_country_published
                 ON news(country_code, published_at DESC);
+            CREATE TABLE IF NOT EXISTS app_state (
+                state_key TEXT PRIMARY KEY,
+                state_value TEXT NOT NULL
+            );
             """;
         command.ExecuteNonQuery();
     }
@@ -92,6 +96,29 @@ public sealed class NewsRepository
         var urls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         while (reader.Read()) urls.Add(reader.GetString(0));
         return urls;
+    }
+
+    public DateTimeOffset? GetLastApiSync()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT state_value FROM app_state WHERE state_key = 'last_api_sync';";
+        var value = command.ExecuteScalar()?.ToString();
+        return DateTimeOffset.TryParse(value, out var result) ? result : null;
+    }
+
+    public void SetLastApiSync(DateTimeOffset value)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO app_state(state_key, state_value) VALUES ('last_api_sync', $value)
+            ON CONFLICT(state_key) DO UPDATE SET state_value = excluded.state_value;
+            """;
+        command.Parameters.AddWithValue("$value", value.ToUniversalTime().ToString("O"));
+        command.ExecuteNonQuery();
     }
 
     public IReadOnlyList<NewsArticle> GetNewsByCountry(string countryCode)

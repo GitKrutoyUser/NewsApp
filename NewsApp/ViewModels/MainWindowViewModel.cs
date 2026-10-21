@@ -11,6 +11,7 @@ namespace NewsApp.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
+    private static readonly TimeSpan MinimumApiInterval = TimeSpan.FromMinutes(30);
     public event EventHandler<IReadOnlySet<string>>? NewCountriesChanged;
     private readonly NewsRepository _repository;
     private readonly NewsService _service;
@@ -77,12 +78,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         if (!await _refreshGate.WaitAsync(0)) return;
         try
         {
+            var lastSync = await Task.Run(() => _repository.GetLastApiSync(), _lifetime.Token);
+            if (lastSync is not null && DateTimeOffset.UtcNow - lastSync.Value < MinimumApiInterval)
+            {
+                var next = lastSync.Value.Add(MinimumApiInterval).ToLocalTime();
+                await SetUiAsync(() => StatusText = $"Новости из базы · следующее обновление после {next:HH:mm}");
+                return;
+            }
             await SetUiAsync(() => { IsRefreshing = true; StatusText = "Обновляем мировую ленту…"; });
             var news = await _service.FetchNewsAsync(_lifetime.Token);
             var knownUrls = await Task.Run(() => _repository.GetKnownUrls(), _lifetime.Token);
             var newCountries = news.Where(x => !knownUrls.Contains(x.Url)).Select(x => x.CountryCode)
                 .Where(x => x != "WORLD").ToHashSet(StringComparer.OrdinalIgnoreCase);
             await Task.Run(() => _repository.SaveNews(news), _lifetime.Token);
+            await Task.Run(() => _repository.SetLastApiSync(DateTimeOffset.UtcNow), _lifetime.Token);
             await SetUiAsync(() =>
             {
                 foreach (var country in Countries) country.HasNewNews = newCountries.Contains(country.Code);
@@ -127,6 +136,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         try
         {
             await LoadCachedNewsAsync(SelectedCountry.Code);
+            // Existing data is shown first. API is contacted only when the persistent 30-minute window allows it.
             await RefreshAsync();
         }
         catch (Exception exception) { Debug.WriteLine($"Initialization failed: {exception}"); }

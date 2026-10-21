@@ -1,8 +1,10 @@
+using Avalonia.Media.Imaging;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System.Text.Json.Serialization;
 
 namespace NewsApp.Models;
 
-public sealed class NewsArticle
+public partial class NewsArticle : ObservableObject
 {
     public string Url { get; set; } = string.Empty;
     public string CountryCode { get; set; } = "WORLD";
@@ -11,7 +13,10 @@ public sealed class NewsArticle
     public string Description { get; set; } = string.Empty;
     public DateTimeOffset PublishedAt { get; set; } = DateTimeOffset.UtcNow;
     public string? ImageUrl { get; set; }
-    public string PublishedAtText => PublishedAt.ToLocalTime().ToString("dd.MM.yyyy, HH:mm:ss zzz");
+    public string PublishedAtText => PublishedAt.ToLocalTime().ToString("dd.MM.yyyy");
+
+    [ObservableProperty]
+    private Bitmap? _imageBitmap;
 }
 
 public sealed record Country(string Code, string Name, string Flag)
@@ -21,8 +26,7 @@ public sealed record Country(string Code, string Name, string Flag)
 
 public sealed class NewsApiResponse
 {
-    [JsonPropertyName("results")]
-    public List<NewsApiItem> Results { get; set; } = new();
+    [JsonPropertyName("results")] public List<NewsApiItem> Results { get; set; } = new();
 }
 
 public sealed class NewsApiItem

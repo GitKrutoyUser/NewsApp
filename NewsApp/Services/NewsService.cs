@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Avalonia.Media.Imaging;
 using HtmlAgilityPack;
 using NewsApp.Models;
 
@@ -9,6 +10,7 @@ namespace NewsApp.Services;
 public sealed class NewsService
 {
     private const string ApiUrl = "https://freenewsapi.ai/v1/search?lang=ru";
+    private static readonly string[] WorldCountryCodes = { "US", "RU", "DE", "FR", "GB", "CN", "JP", "IN", "BR", "CA", "AU", "IT", "ES", "TR", "KR", "MX", "PL", "NL", "SE", "CH", "IL", "UA", "ZA" };
     private readonly HttpClient _httpClient;
 
     static NewsService() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -21,13 +23,8 @@ public sealed class NewsService
 
     public async Task<IReadOnlyList<NewsArticle>> FetchNewsAsync(CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.GetAsync(ApiUrl, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var apiResponse = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken)
-            ?? throw new InvalidDataException("API вернул пустой ответ.");
-
-        var articles = apiResponse.Results
+        var responses = await Task.WhenAll(WorldCountryCodes.Select(code => FetchCountryAsync(code, cancellationToken)));
+        var articles = responses.SelectMany(x => x)
             .Where(x => string.Equals(x.Language, "ru", StringComparison.OrdinalIgnoreCase))
             .Select(ToArticle)
             .Where(x => x is not null)
@@ -46,13 +43,41 @@ public sealed class NewsService
         return articles;
     }
 
+    public async Task<Bitmap?> DownloadImageAsync(string? imageUrl, CancellationToken cancellationToken = default)
+    {
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri)) return null;
+        try
+        {
+            using var response = await _httpClient.GetAsync(uri, cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            return bytes.Length == 0 ? null : new Bitmap(new MemoryStream(bytes));
+        }
+        catch (HttpRequestException) { return null; }
+        catch (TaskCanceledException) { return null; }
+        catch (ArgumentException) { return null; }
+    }
+
+    private async Task<List<NewsApiItem>> FetchCountryAsync(string countryCode, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await _httpClient.GetAsync($"{ApiUrl}&country={countryCode}&size=12", cancellationToken);
+            response.EnsureSuccessStatusCode();
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
+            return result?.Results ?? new List<NewsApiItem>();
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { return new List<NewsApiItem>(); }
+        catch (HttpRequestException) { return new List<NewsApiItem>(); }
+    }
+
     private static NewsArticle? ToArticle(NewsApiItem item)
     {
         if (string.IsNullOrWhiteSpace(item.Url)) return null;
         var country = item.Country?.ToUpperInvariant();
-        if (string.IsNullOrWhiteSpace(country) && item.Tld is { Length: 2 })
-            country = item.Tld.ToUpperInvariant();
-        if (country is null or { Length: > 8 }) country = "WORLD";
+        if (string.IsNullOrWhiteSpace(country)) country = "WORLD";
+        if (country.Length > 8) country = "WORLD";
         var imageUrl = MakeAbsoluteUrl(item.Url, item.Image);
 
         var publishedAt = ParseDate(item.PublishedAt);
@@ -63,13 +88,22 @@ public sealed class NewsService
         {
             Url = item.Url,
             CountryCode = country,
-            CountryName = country == "WORLD" ? "Мир" : country,
+            CountryName = CountryNameFor(country),
             Title = item.Title ?? "Без заголовка",
             Description = item.Description ?? string.Empty,
             PublishedAt = publishedAt,
             ImageUrl = imageUrl
         };
     }
+
+    private static string CountryNameFor(string code) => code switch
+    {
+        "US" => "США", "RU" => "Россия", "DE" => "Германия", "FR" => "Франция", "GB" => "Великобритания",
+        "CN" => "Китай", "JP" => "Япония", "IN" => "Индия", "BR" => "Бразилия", "CA" => "Канада",
+        "AU" => "Австралия", "IT" => "Италия", "ES" => "Испания", "TR" => "Турция", "KR" => "Южная Корея",
+        "MX" => "Мексика", "PL" => "Польша", "NL" => "Нидерланды", "SE" => "Швеция", "CH" => "Швейцария",
+        "IL" => "Израиль", "UA" => "Украина", "ZA" => "ЮАР", _ => "Мир"
+    };
 
     private async Task<string?> TryGetOgImageAsync(string articleUrl, CancellationToken cancellationToken)
     {

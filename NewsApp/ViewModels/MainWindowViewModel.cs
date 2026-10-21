@@ -135,6 +135,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 if (!IsRefreshing && items.Count == 0)
                     StatusText = "В кэше пока нет новостей для этой страны";
             });
+            await LoadImagesAsync(items);
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception)
@@ -142,6 +143,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             Debug.WriteLine($"Cache read failed: {exception}");
             await SetUiAsync(() => StatusText = "Не удалось прочитать локальный кэш новостей");
         }
+    }
+
+    private async Task LoadImagesAsync(IEnumerable<NewsArticle> items)
+    {
+        await Parallel.ForEachAsync(items.Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl)), new ParallelOptions
+        {
+            MaxDegreeOfParallelism = 6,
+            CancellationToken = _lifetime.Token
+        }, async (article, token) =>
+        {
+            var bitmap = await _service.DownloadImageAsync(article.ImageUrl, token);
+            if (bitmap is not null)
+                await SetUiAsync(() => article.ImageBitmap = bitmap);
+        });
     }
 
     private static Task SetUiAsync(Action action) => Dispatcher.UIThread.InvokeAsync(action).GetTask();

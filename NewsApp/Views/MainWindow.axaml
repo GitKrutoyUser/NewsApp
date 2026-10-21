@@ -47,12 +47,12 @@
                     <TextBlock Text="{Binding Title}" FontSize="21" FontWeight="SemiBold" Foreground="#F4F7FB" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding Description}" Classes="muted" FontSize="14" TextWrapping="Wrap" MaxLines="3"/>
                     <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,8,0,0">
-                      <TextBlock Text="{Binding PublishedAtText}" Classes="muted"/>
+                      <TextBlock Text="Опубликовано: {Binding PublishedAtText}" Classes="muted"/>
                       <Button Content="Открыть оригинал →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/>
                     </StackPanel>
                   </StackPanel>
                   <Border Grid.Column="1" Background="#202B39" CornerRadius="10" ClipToBounds="True">
-                    <Image Source="{Binding ImageUrl}" Stretch="UniformToFill" MinHeight="130"/>
+                    <Image Source="{Binding ImageBitmap}" Stretch="UniformToFill" MinHeight="130"/>
                   </Border>
                 </Grid>
               </Border>

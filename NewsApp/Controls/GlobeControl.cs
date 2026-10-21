@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -14,6 +15,7 @@ public sealed class GlobeControl : Control
         public string Code { get; init; } = "";
         public string Name { get; init; } = "";
         public List<List<Point>> Polygons { get; } = new();
+        public Point LabelPoint { get; set; }
     }
 
     private readonly List<CountryShape> _countries = new();
@@ -47,14 +49,19 @@ public sealed class GlobeControl : Control
                 var name = properties.TryGetProperty("ADMIN", out var admin) ? admin.GetString() : null;
                 if (string.IsNullOrWhiteSpace(code) || code == "-99") continue;
 
-                var country = new CountryShape { Code = code, Name = name ?? code };
+                var country = new CountryShape { Code = code, Name = RussianName(code, name ?? code) };
                 var geometry = feature.GetProperty("geometry");
                 var type = geometry.GetProperty("type").GetString();
                 var coordinates = geometry.GetProperty("coordinates");
                 if (type == "Polygon") AddPolygonSet(country, coordinates);
                 else if (type == "MultiPolygon")
                     foreach (var polygon in coordinates.EnumerateArray()) AddPolygonSet(country, polygon);
-                if (country.Polygons.Count > 0) _countries.Add(country);
+                if (country.Polygons.Count > 0)
+                {
+                    var points = country.Polygons.SelectMany(x => x).ToList();
+                    country.LabelPoint = new Point(points.Average(x => x.X), points.Average(x => x.Y));
+                    _countries.Add(country);
+                }
             }
         }
         catch
@@ -87,14 +94,35 @@ public sealed class GlobeControl : Control
         foreach (var country in _countries)
         {
             var isSelected = country.Code.Equals(SelectedCountryCode, StringComparison.OrdinalIgnoreCase);
-            var fill = new SolidColorBrush(isSelected ? Color.Parse("#2876B8") : Color.Parse("#1D405E"));
-            var pen = new Pen(new SolidColorBrush(isSelected ? Color.Parse("#A8DCFF") : Color.Parse("#5C94BA")), isSelected ? 1.25 : 0.65);
+            var fill = isSelected ? new SolidColorBrush(Color.Parse("#F5B642")) : CountryColor(country.Code);
+            var pen = new Pen(new SolidColorBrush(isSelected ? Colors.White : Color.Parse("#B9D5E8")), isSelected ? 1.6 : 0.75);
             foreach (var polygon in country.Polygons)
                 DrawPolygon(context, polygon, center, radius, fill, pen);
+            var label = Project(country.LabelPoint.X, country.LabelPoint.Y, center, radius);
+            if (label is not null && radius > 130)
+            {
+                var text = new FormattedText(country.Name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 9, Brushes.White);
+                context.DrawText(text, new Point(label.Value.X - text.Width / 2, label.Value.Y - text.Height / 2));
+            }
         }
 
         context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.Parse("#6FA8D2")), 1), center, radius, radius);
     }
+
+    private static IBrush CountryColor(string code)
+    {
+        var palette = new[] { "#3D7EA6", "#4F8F6A", "#A56B46", "#7A65A8", "#B05D72", "#3F8E89", "#8A7A42", "#A65B8D" };
+        return new SolidColorBrush(Color.Parse(palette[Math.Abs(code.GetHashCode()) % palette.Length]));
+    }
+
+    private static string RussianName(string code, string fallback) => code.ToUpperInvariant() switch
+    {
+        "US" => "США", "RU" => "Россия", "DE" => "Германия", "FR" => "Франция", "GB" => "Великобритания",
+        "CN" => "Китай", "JP" => "Япония", "IN" => "Индия", "BR" => "Бразилия", "CA" => "Канада",
+        "AU" => "Австралия", "IT" => "Италия", "ES" => "Испания", "TR" => "Турция", "KR" => "Корея",
+        "MX" => "Мексика", "PL" => "Польша", "NL" => "Нидерланды", "SE" => "Швеция", "CH" => "Швейцария",
+        "IL" => "Израиль", "UA" => "Украина", "ZA" => "ЮАР", _ => fallback
+    };
 
     private void DrawPolygon(DrawingContext context, List<Point> polygon, Point center, double radius, IBrush fill, Pen pen)
     {

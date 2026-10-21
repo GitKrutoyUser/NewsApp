@@ -1,0 +1,22 @@
+# Visual Studio and IDE state
+.vs/
+*.user
+*.suo
+
+# Build and package output (kept locally, not duplicated in Git)
+**/bin/
+**/obj/
+
+# Local application data
+**/world_news.db
+**/world_news.db-shm
+**/world_news.db-wal
+
+# Archives and generated platform packages
+*.zip
+NewsApp-windows-x64/
+NewsApp-linux-x64/
+
+# OS files
+.DS_Store
+Thumbs.db

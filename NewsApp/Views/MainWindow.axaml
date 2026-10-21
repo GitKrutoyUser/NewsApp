@@ -1,0 +1,65 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NewsApp.ViewModels"
+        xmlns:models="using:NewsApp.Models"
+        xmlns:controls="using:NewsApp.Controls"
+        x:Class="NewsApp.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="1440" Height="880" MinWidth="1100" MinHeight="680"
+        Background="#0D1117" Title="WorldPulse — интерактивная мировая лента">
+  <Window.Styles>
+    <Style Selector="TextBlock.title"><Setter Property="FontSize" Value="30"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="#F4F7FB"/></Style>
+    <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="#8B98A9"/><Setter Property="FontSize" Value="13"/></Style>
+    <Style Selector="Button.country"><Setter Property="Background" Value="Transparent"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="14,11"/><Setter Property="Margin" Value="0,2"/></Style>
+    <Style Selector="Button.country:pointerover"><Setter Property="Background" Value="#1B2634"/></Style>
+    <Style Selector="Border.card"><Setter Property="Background" Value="#151D28"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="18"/><Setter Property="Margin" Value="0,0,0,14"/></Style>
+    <Style Selector="Button.link"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#72B7FF"/><Setter Property="Padding" Value="0"/></Style>
+  </Window.Styles>
+  <Grid ColumnDefinitions="390,*" ColumnSpacing="26">
+    <Border Grid.Column="0" Background="#111821" Padding="18" CornerRadius="0,18,18,0">
+      <Grid RowDefinitions="Auto,*,Auto,Auto">
+        <StackPanel Spacing="6">
+          <TextBlock Text="WORLDPULSE" FontSize="22" FontWeight="Bold" Foreground="#72B7FF"/>
+          <TextBlock Text="Интерактивная карта новостей" Classes="muted" Margin="0,0,0,10"/>
+        </StackPanel>
+        <controls:GlobeControl x:Name="Globe" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" MinHeight="350"/>
+        <TextBlock Grid.Row="2" Text="{Binding SelectedCountry.DisplayName}" HorizontalAlignment="Center" FontSize="20" FontWeight="SemiBold" Foreground="#F4F7FB" Margin="0,10,0,2"/>
+        <TextBlock Grid.Row="3" Text="Крутите глобус мышью и выбирайте страну кликом" Classes="muted" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+      </Grid>
+    </Border>
+    <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="10,30,38,20">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel>
+          <TextBlock Text="{Binding SelectedCountry.DisplayName}" Classes="title"/>
+          <TextBlock Text="Свежие события из локального кэша WorldPulse" Classes="muted" Margin="0,6,0,0"/>
+        </StackPanel>
+        <Button Grid.Column="1" Content="↻  Обновить" Command="{Binding RefreshCommand}" Padding="18,11" Background="#2477D4" Foreground="White" CornerRadius="8" IsEnabled="{Binding !IsRefreshing}"/>
+      </Grid>
+      <TextBlock Grid.Row="1" Text="{Binding StatusText}" Classes="muted" Margin="0,22,0,16"/>
+      <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding Articles}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:NewsArticle">
+              <Border Classes="card">
+                <Grid ColumnDefinitions="*,190" ColumnSpacing="20">
+                  <StackPanel Spacing="9">
+                    <TextBlock Text="{Binding CountryName}" Foreground="#72B7FF" FontSize="12" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding Title}" FontSize="21" FontWeight="SemiBold" Foreground="#F4F7FB" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Description}" Classes="muted" FontSize="14" TextWrapping="Wrap" MaxLines="3"/>
+                    <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,8,0,0">
+                      <TextBlock Text="{Binding PublishedAtText}" Classes="muted"/>
+                      <Button Content="Открыть оригинал →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/>
+                    </StackPanel>
+                  </StackPanel>
+                  <Border Grid.Column="1" Background="#202B39" CornerRadius="10" ClipToBounds="True">
+                    <Image Source="{Binding ImageUrl}" Stretch="UniformToFill" MinHeight="130"/>
+                  </Border>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</Window>

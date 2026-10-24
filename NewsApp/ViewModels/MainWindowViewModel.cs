@@ -21,14 +21,31 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<Country> Countries { get; } = new(new[]
     {
-        new Country("WORLD", "Мир", "🌐"), new Country("US", "США", "🇺🇸"), new Country("RU", "Россия", "🇷🇺"),
-        new Country("DE", "Германия", "🇩🇪"), new Country("FR", "Франция", "🇫🇷"), new Country("GB", "Великобритания", "🇬🇧"),
-        new Country("CN", "Китай", "🇨🇳"), new Country("JP", "Япония", "🇯🇵"), new Country("IN", "Индия", "🇮🇳"),
-        new Country("BR", "Бразилия", "🇧🇷"), new Country("CA", "Канада", "🇨🇦"), new Country("AU", "Австралия", "🇦🇺"),
-        new Country("IT", "Италия", "🇮🇹"), new Country("ES", "Испания", "🇪🇸"), new Country("TR", "Турция", "🇹🇷"),
-        new Country("KR", "Южная Корея", "🇰🇷"), new Country("MX", "Мексика", "🇲🇽"), new Country("PL", "Польша", "🇵🇱"),
-        new Country("NL", "Нидерланды", "🇳🇱"), new Country("SE", "Швеция", "🇸🇪"), new Country("CH", "Швейцария", "🇨🇭"),
-        new Country("IL", "Израиль", "🇮🇱"), new Country("UA", "Украина", "🇺🇦"), new Country("ZA", "ЮАР", "🇿🇦")
+        new Country("WORLD", "Мир", "🌐"),
+        new Country("US", "США", "🇺🇸"),
+        new Country("RU", "Россия", "🇷🇺"),
+        new Country("DE", "Германия", "🇩🇪"),
+        new Country("FR", "Франция", "🇫🇷"),
+        new Country("GB", "Великобритания", "🇬🇧"),
+        new Country("CN", "Китай", "🇨🇳"),
+
+        new Country("JP", "Япония", "🇯🇵"),
+        new Country("IN", "Индия", "🇮🇳"),
+        new Country("BR", "Бразилия", "🇧🇷"),
+        new Country("CA", "Канада", "🇨🇦"),
+        new Country("AU", "Австралия", "🇦🇺"),
+        new Country("IT", "Италия", "🇮🇹"), 
+        new Country("ES", "Испания", "🇪🇸"),
+        new Country("TR", "Турция", "🇹🇷"),
+        new Country("KR", "Южная Корея", "🇰🇷"),
+        new Country("MX", "Мексика", "🇲🇽")
+        , new Country("PL", "Польша", "🇵🇱"),
+        new Country("NL", "Нидерланды", "🇳🇱")
+        , new Country("SE", "Швеция", "🇸🇪"),
+        new Country("CH", "Швейцария", "🇨🇭"),
+        new Country("IL", "Израиль", "🇮🇱"), 
+        new Country("UA", "Украина", "🇺🇦"), 
+        new Country("ZA", "ЮАР", "🇿🇦")
     });
 
     public ObservableCollection<NewsArticle> Articles { get; } = new();
@@ -63,7 +80,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         var country = Countries.FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
         if (country is null)
         {
-            country = new Country(code, string.IsNullOrWhiteSpace(countryName) ? code : countryName, "🌐");
+            country = new Country(code, string.IsNullOrWhiteSpace(countryName) ? code : countryName, "");
             Countries.Add(country);
         }
         SelectedCountry = country;
@@ -83,17 +100,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             if (hasAnyNews && lastSync is not null && DateTimeOffset.UtcNow - lastSync.Value < MinimumApiInterval)
             {
                 var next = lastSync.Value.Add(MinimumApiInterval).ToLocalTime();
-                await SetUiAsync(() => StatusText = $"Новости из базы · следующее обновление после {next:HH:mm}");
+                await SetUiAsync(() => StatusText = $" следующее обновление в {next:HH:mm}");
                 return;
             }
-            await SetUiAsync(() => { IsRefreshing = true; StatusText = "Обновляем мировую ленту…"; });
+            await SetUiAsync(() => { IsRefreshing = true; StatusText = "Новости обновляются"; });
             var news = await _service.FetchNewsAsync(_lifetime.Token);
             var knownUrls = await Task.Run(() => _repository.GetKnownUrls(), _lifetime.Token);
             var newCountries = news.Where(x => !knownUrls.Contains(x.Url)).Select(x => x.CountryCode)
                 .Where(x => x != "WORLD").ToHashSet(StringComparer.OrdinalIgnoreCase);
             await Task.Run(() => _repository.SaveNews(news), _lifetime.Token);
-            // Не фиксируем пустой ответ как успешную синхронизацию: новый компьютер
-            // должен повторить первичную загрузку при следующем запуске.
+            
             if (news.Count > 0)
                 await Task.Run(() => _repository.SetLastApiSync(DateTimeOffset.UtcNow), _lifetime.Token);
             await SetUiAsync(() =>
@@ -102,7 +118,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 NewCountriesChanged?.Invoke(this, newCountries);
             });
             await LoadCachedNewsAsync(SelectedCountry.Code);
-            await SetUiAsync(() => StatusText = $"Обновлено: {DateTime.Now:HH:mm} · {news.Count} материалов");
+            await SetUiAsync(() => StatusText = $"Обновлено: {DateTime.Now:HH:mm} ");
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception)
@@ -140,7 +156,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         try
         {
             await LoadCachedNewsAsync(SelectedCountry.Code);
-            // Existing data is shown first. API is contacted only when the persistent 30-minute window allows it.
             await RefreshAsync();
         }
         catch (Exception exception) { Debug.WriteLine($"Initialization failed: {exception}"); }
@@ -156,7 +171,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 Articles.Clear();
                 foreach (var article in items) Articles.Add(article);
                 if (!IsRefreshing && items.Count == 0)
-                    StatusText = "В кэше пока нет новостей для этой страны";
+                    StatusText = "пока что нет новостей для этой страны";
             });
             await LoadImagesAsync(items);
         }

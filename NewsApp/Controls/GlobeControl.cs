@@ -77,7 +77,7 @@ public sealed class GlobeControl : Control
         }
         catch
         {
-            // The application still opens if the optional map asset is damaged.
+
         }
     }
 

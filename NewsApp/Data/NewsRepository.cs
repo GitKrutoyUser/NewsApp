@@ -11,9 +11,29 @@ public sealed class NewsRepository
 
     public NewsRepository(string? databasePath = null)
     {
-        databasePath ??= Path.Combine(AppContext.BaseDirectory, "world_news.db");
+        databasePath ??= GetUserDatabasePath();
+        var directory = Path.GetDirectoryName(databasePath);
+        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
         _connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString();
         InitializeDatabase();
+    }
+
+    private static string GetUserDatabasePath()
+    {
+        var appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WorldPulse");
+        var userDatabase = Path.Combine(appData, "world_news.db");
+        var oldDatabase = Path.Combine(AppContext.BaseDirectory, "world_news.db");
+        if (!File.Exists(userDatabase) && File.Exists(oldDatabase))
+        {
+            try
+            {
+                Directory.CreateDirectory(appData);
+                File.Copy(oldDatabase, userDatabase);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+        return userDatabase;
     }
 
     private void InitializeDatabase()
@@ -96,6 +116,15 @@ public sealed class NewsRepository
         var urls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         while (reader.Read()) urls.Add(reader.GetString(0));
         return urls;
+    }
+
+    public bool HasAnyNews()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT EXISTS(SELECT 1 FROM news LIMIT 1);";
+        return Convert.ToInt64(command.ExecuteScalar()) == 1;
     }
 
     public DateTimeOffset? GetLastApiSync()

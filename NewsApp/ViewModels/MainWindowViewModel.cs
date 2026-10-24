@@ -78,8 +78,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         if (!await _refreshGate.WaitAsync(0)) return;
         try
         {
+            var hasAnyNews = await Task.Run(() => _repository.HasAnyNews(), _lifetime.Token);
             var lastSync = await Task.Run(() => _repository.GetLastApiSync(), _lifetime.Token);
-            if (lastSync is not null && DateTimeOffset.UtcNow - lastSync.Value < MinimumApiInterval)
+            if (hasAnyNews && lastSync is not null && DateTimeOffset.UtcNow - lastSync.Value < MinimumApiInterval)
             {
                 var next = lastSync.Value.Add(MinimumApiInterval).ToLocalTime();
                 await SetUiAsync(() => StatusText = $"Новости из базы · следующее обновление после {next:HH:mm}");
@@ -91,7 +92,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var newCountries = news.Where(x => !knownUrls.Contains(x.Url)).Select(x => x.CountryCode)
                 .Where(x => x != "WORLD").ToHashSet(StringComparer.OrdinalIgnoreCase);
             await Task.Run(() => _repository.SaveNews(news), _lifetime.Token);
-            await Task.Run(() => _repository.SetLastApiSync(DateTimeOffset.UtcNow), _lifetime.Token);
+            // Не фиксируем пустой ответ как успешную синхронизацию: новый компьютер
+            // должен повторить первичную загрузку при следующем запуске.
+            if (news.Count > 0)
+                await Task.Run(() => _repository.SetLastApiSync(DateTimeOffset.UtcNow), _lifetime.Token);
             await SetUiAsync(() =>
             {
                 foreach (var country in Countries) country.HasNewNews = newCountries.Contains(country.Code);

@@ -17,22 +17,29 @@ public sealed class NewsService
 
     public NewsService(HttpClient? httpClient = null)
     {
-        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("WorldPulse/1.0");
     }
 
     public async Task<IReadOnlyList<NewsArticle>> FetchNewsAsync(CancellationToken cancellationToken = default)
     {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(90));
+        var requestToken = timeout.Token;
         var articlesFromApi = new List<NewsApiItem>();
-        await Parallel.ForEachAsync(WorldCountryCodes, new ParallelOptions
+        try
         {
-            MaxDegreeOfParallelism = 4,
-            CancellationToken = cancellationToken
-        }, async (countryCode, token) =>
-        {
-            var items = await FetchCountryAsync(countryCode, token);
-            lock (articlesFromApi) articlesFromApi.AddRange(items);
-        });
+            await Parallel.ForEachAsync(WorldCountryCodes, new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 4,
+                CancellationToken = requestToken
+            }, async (countryCode, token) =>
+            {
+                var items = await FetchCountryAsync(countryCode, token);
+                lock (articlesFromApi) articlesFromApi.AddRange(items);
+            });
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
 
         var articles = articlesFromApi
             .Where(x => string.Equals(x.Language, "ru", StringComparison.OrdinalIgnoreCase))
@@ -41,15 +48,19 @@ public sealed class NewsService
             .Cast<NewsArticle>()
             .ToList();
 
-        await Parallel.ForEachAsync(articles, new ParallelOptions
+        try
         {
-            MaxDegreeOfParallelism = 6,
-            CancellationToken = cancellationToken
-        }, async (article, token) =>
-        {
-            if (string.IsNullOrWhiteSpace(article.ImageUrl))
-                article.ImageUrl = await TryGetOgImageAsync(article.Url, token);
-        });
+            await Parallel.ForEachAsync(articles, new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 6,
+                CancellationToken = requestToken
+            }, async (article, token) =>
+            {
+                if (string.IsNullOrWhiteSpace(article.ImageUrl))
+                    article.ImageUrl = await TryGetOgImageAsync(article.Url, token);
+            });
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
         return articles;
     }
 

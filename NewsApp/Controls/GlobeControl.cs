@@ -228,7 +228,9 @@ public sealed class GlobeControl : Control
                 if (code is not null)
                 {
                     SelectedCountryCode = code;
-                    SelectedCountryName = _countries.FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase))?.Name ?? code;
+                    SelectedCountryName = code == "WORLD"
+                        ? "Мир"
+                        : _countries.FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase))?.Name ?? code;
                     CountrySelected?.Invoke(this, code);
                     InvalidateVisual();
                 }
@@ -265,7 +267,7 @@ public sealed class GlobeControl : Control
 
         foreach (var country in _countries)
             if (country.Polygons.Any(polygon => PointInPolygon(longitude, latitude, polygon))) return country.Code;
-        return null;
+        return "WORLD";
     }
 
     private static bool PointInPolygon(double x, double y, List<Point> polygon)

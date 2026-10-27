@@ -23,8 +23,18 @@ public sealed class NewsService
 
     public async Task<IReadOnlyList<NewsArticle>> FetchNewsAsync(CancellationToken cancellationToken = default)
     {
-        var responses = await Task.WhenAll(WorldCountryCodes.Select(code => FetchCountryAsync(code, cancellationToken)));
-        var articles = responses.SelectMany(x => x)
+        var articlesFromApi = new List<NewsApiItem>();
+        await Parallel.ForEachAsync(WorldCountryCodes, new ParallelOptions
+        {
+            MaxDegreeOfParallelism = 4,
+            CancellationToken = cancellationToken
+        }, async (countryCode, token) =>
+        {
+            var items = await FetchCountryAsync(countryCode, token);
+            lock (articlesFromApi) articlesFromApi.AddRange(items);
+        });
+
+        var articles = articlesFromApi
             .Where(x => string.Equals(x.Language, "ru", StringComparison.OrdinalIgnoreCase))
             .Select(ToArticle)
             .Where(x => x is not null)

@@ -118,7 +118,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 NewCountriesChanged?.Invoke(this, newCountries);
             });
             await LoadCachedNewsAsync(SelectedCountry.Code);
-            await SetUiAsync(() => StatusText = $"Обновлено: {DateTime.Now:HH:mm} ");
+            await SetUiAsync(() => StatusText = news.Count == 0
+                ? "API не вернул новости · показываем локальную базу"
+                : $"Обновлено: {DateTime.Now:HH:mm} · {news.Count} материалов");
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception)

@@ -259,6 +259,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 CancellationToken = _lifetime.Token
             }, async (article, token) =>
             {
+                var metadataChanged = false;
                 var bitmap = await _service.DownloadImageAsync(article.ImageUrl, token);
                 if (bitmap is null)
                 {
@@ -270,6 +271,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                         bitmap = await _service.DownloadImageAsync(fallbackImageUrl, token);
                     }
                 }
+                if (string.IsNullOrWhiteSpace(article.Description))
+                {
+                    var description = await _service.FindArticleDescriptionAsync(article.Url, token);
+                    if (!string.IsNullOrWhiteSpace(description))
+                    {
+                        article.Description = description;
+                        metadataChanged = true;
+                    }
+                }
+                if (metadataChanged)
+                    await Task.Run(() => _repository.SaveNews(new[] { article }), token);
                 if (bitmap is not null)
                     await SetUiAsync(() => article.ImageBitmap = bitmap);
             });

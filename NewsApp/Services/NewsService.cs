@@ -75,6 +75,34 @@ public sealed class NewsService
         return await TryGetOgImageAsync(articleUrl, timeout.Token);
     }
 
+    public async Task<string?> FindArticleDescriptionAsync(string articleUrl, CancellationToken cancellationToken = default)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        try
+        {
+            using var response = await _httpClient.GetAsync(articleUrl, timeout.Token);
+            if (!response.IsSuccessStatusCode) return null;
+            var bytes = await response.Content.ReadAsByteArrayAsync(timeout.Token);
+            var charset = response.Content.Headers.ContentType?.CharSet?.Trim('"', '\'');
+            Encoding encoding;
+            try { encoding = string.IsNullOrWhiteSpace(charset) ? Encoding.UTF8 : Encoding.GetEncoding(charset); }
+            catch (ArgumentException) { encoding = Encoding.UTF8; }
+
+            var document = new HtmlDocument();
+            document.LoadHtml(encoding.GetString(bytes));
+            var meta = document.DocumentNode.SelectSingleNode("//meta[@name='description'] | //meta[@property='og:description']")
+                ?.GetAttributeValue("content", string.Empty)?.Trim();
+            if (!string.IsNullOrWhiteSpace(meta)) return HtmlEntity.DeEntitize(meta);
+
+            return document.DocumentNode.SelectNodes("//article//p | //main//p | //p")?
+                .Select(x => HtmlEntity.DeEntitize(x.InnerText).Trim())
+                .FirstOrDefault(x => x.Length >= 60);
+        }
+        catch (HttpRequestException) { return null; }
+        catch (TaskCanceledException) { return null; }
+    }
+
     private async Task<List<NewsApiItem>> FetchCountryAsync(string countryCode, CancellationToken cancellationToken)
     {
         for (var attempt = 0; attempt < 3; attempt++)

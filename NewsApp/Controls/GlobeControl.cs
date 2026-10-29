@@ -99,10 +99,11 @@ public sealed class GlobeControl : Control
     {
         var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
         var radius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * _zoom);
-        var globeRect = new Rect(center.X - radius, center.Y - radius, radius * 2, radius * 2);
         context.DrawEllipse(new SolidColorBrush(Color.Parse("#13253C")), new Pen(new SolidColorBrush(Color.Parse("#3B79AF")), 2), center, radius, radius);
+        DrawGlobeGrid(context, center, radius);
 
-        foreach (var country in _countries)
+        var occupiedLabels = new List<Rect>();
+        foreach (var country in _countries.OrderByDescending(x => x.SizeScore))
         {
             var isSelected = country.Code.Equals(SelectedCountryCode, StringComparison.OrdinalIgnoreCase);
             var fill = isSelected ? new SolidColorBrush(Color.Parse("#F5B642")) : CountryColor(country.Code);
@@ -113,9 +114,14 @@ public sealed class GlobeControl : Control
             if (label is not null && radius > 130 && ShouldShowLabel(country))
             {
                 var text = new FormattedText(country.Name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 9, Brushes.White);
-                context.DrawText(text, new Point(label.Value.X - text.Width / 2, label.Value.Y - text.Height / 2));
-                if (_newCountryCodes.Contains(country.Code))
-                    context.DrawEllipse(Brushes.OrangeRed, null, new Point(label.Value.X + text.Width / 2 + 6, label.Value.Y), 4, 4);
+                var textRect = new Rect(label.Value.X - text.Width / 2 - 3, label.Value.Y - text.Height / 2 - 2, text.Width + 6, text.Height + 4);
+                if (!occupiedLabels.Any(existing => existing.Intersects(textRect)))
+                {
+                    occupiedLabels.Add(textRect);
+                    context.DrawText(text, new Point(label.Value.X - text.Width / 2, label.Value.Y - text.Height / 2));
+                    if (_newCountryCodes.Contains(country.Code))
+                        context.DrawEllipse(Brushes.OrangeRed, null, new Point(textRect.Right + 4, label.Value.Y), 4, 4);
+                }
             }
         }
 
@@ -125,7 +131,18 @@ public sealed class GlobeControl : Control
     private static IBrush CountryColor(string code)
     {
         var palette = new[] { "#3D7EA6", "#4F8F6A", "#A56B46", "#7A65A8", "#B05D72", "#3F8E89", "#8A7A42", "#A65B8D" };
-        return new SolidColorBrush(Color.Parse(palette[Math.Abs(code.GetHashCode()) % palette.Length]));
+        var hash = 17;
+        foreach (var character in code) hash = unchecked(hash * 31 + character);
+        return new SolidColorBrush(Color.Parse(palette[Math.Abs(hash) % palette.Length]));
+    }
+
+    private static void DrawGlobeGrid(DrawingContext context, Point center, double radius)
+    {
+        var gridPen = new Pen(new SolidColorBrush(Color.Parse("#4C78A0")), 0.45);
+        context.DrawEllipse(null, gridPen, center, radius * 0.66, radius);
+        context.DrawEllipse(null, gridPen, center, radius * 0.32, radius);
+        context.DrawEllipse(null, gridPen, center, radius, radius * 0.48);
+        context.DrawEllipse(null, gridPen, center, radius, radius * 0.78);
     }
 
     private bool ShouldShowLabel(CountryShape country)

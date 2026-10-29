@@ -46,7 +46,6 @@ public sealed class NewsRepository
                 url TEXT PRIMARY KEY,
                 country_code TEXT NOT NULL,
                 country_name TEXT NOT NULL,
-                language_code TEXT NOT NULL DEFAULT 'en',
                 title TEXT NOT NULL,
                 description TEXT NOT NULL DEFAULT '',
                 published_at TEXT NOT NULL,
@@ -60,13 +59,6 @@ public sealed class NewsRepository
             );
             """;
         command.ExecuteNonQuery();
-        try
-        {
-            using var migration = connection.CreateCommand();
-            migration.CommandText = "ALTER TABLE news ADD COLUMN language_code TEXT NOT NULL DEFAULT 'en';";
-            migration.ExecuteNonQuery();
-        }
-        catch (SqliteException) { }
     }
 
     public void SaveNews(IEnumerable<NewsArticle> articles)
@@ -77,8 +69,8 @@ public sealed class NewsRepository
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            INSERT INTO news (url, country_code, country_name, language_code, title, description, published_at, image_url)
-            VALUES ($url, $country, $country_name, $language, $title, $description, $published_at, $image_url)
+            INSERT INTO news (url, country_code, country_name, title, description, published_at, image_url)
+            VALUES ($url, $country, $country_name, $title, $description, $published_at, $image_url)
             ON CONFLICT(url) DO UPDATE SET
                 country_code = excluded.country_code,
                 country_name = excluded.country_name,
@@ -95,7 +87,6 @@ public sealed class NewsRepository
         var url = command.Parameters.Add("$url", SqliteType.Text);
         var country = command.Parameters.Add("$country", SqliteType.Text);
         var countryName = command.Parameters.Add("$country_name", SqliteType.Text);
-        var language = command.Parameters.Add("$language", SqliteType.Text);
         var title = command.Parameters.Add("$title", SqliteType.Text);
         var description = command.Parameters.Add("$description", SqliteType.Text);
         var published = command.Parameters.Add("$published_at", SqliteType.Text);
@@ -106,7 +97,6 @@ public sealed class NewsRepository
             url.Value = article.Url;
             country.Value = article.CountryCode;
             countryName.Value = article.CountryName;
-            language.Value = article.LanguageCode;
             title.Value = article.Title;
             description.Value = article.Description;
             published.Value = article.PublishedAt.ToUniversalTime().ToString("O");
@@ -166,7 +156,7 @@ public sealed class NewsRepository
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT url, country_code, country_name, language_code, title, description, published_at, image_url
+            SELECT url, country_code, country_name, title, description, published_at, image_url
             FROM news
             WHERE $country = 'WORLD' OR country_code = $country
             ORDER BY published_at DESC;
@@ -182,12 +172,11 @@ public sealed class NewsRepository
                 Url = reader.GetString(0),
                 CountryCode = reader.GetString(1),
                 CountryName = reader.GetString(2),
-                LanguageCode = reader.GetString(3),
-                Title = reader.GetString(4),
-                Description = reader.GetString(5),
-                PublishedAt = DateTimeOffset.TryParse(reader.GetString(6), out var date)
+                Title = reader.GetString(3),
+                Description = reader.GetString(4),
+                PublishedAt = DateTimeOffset.TryParse(reader.GetString(5), out var date)
                     ? date : DateTimeOffset.UtcNow,
-                ImageUrl = reader.IsDBNull(7) ? null : reader.GetString(7)
+                ImageUrl = reader.IsDBNull(6) ? null : reader.GetString(6)
             });
         }
         return result;

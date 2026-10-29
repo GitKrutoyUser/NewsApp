@@ -16,7 +16,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public event EventHandler<IReadOnlySet<string>>? NewCountriesChanged;
     private readonly NewsRepository _repository;
     private readonly NewsService _service;
-    private readonly LocalTranslationService _translationService;
     private readonly System.Timers.Timer _refreshTimer;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
@@ -58,17 +57,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _statusText = "Проверяем локальный кэш…";
     [ObservableProperty] private bool _isReadingArticle;
     [ObservableProperty] private NewsArticle? _openedArticle;
-    [ObservableProperty] private string _openedArticleTitle = string.Empty;
     [ObservableProperty] private string _openedArticleText = string.Empty;
     [ObservableProperty] private bool _isArticleLoading;
 
-    public MainWindowViewModel() : this(new NewsRepository(), new NewsService(), new LocalTranslationService()) { }
+    public MainWindowViewModel() : this(new NewsRepository(), new NewsService()) { }
 
-    public MainWindowViewModel(NewsRepository repository, NewsService service, LocalTranslationService? translationService = null)
+    public MainWindowViewModel(NewsRepository repository, NewsService service)
     {
         _repository = repository;
         _service = service;
-        _translationService = translationService ?? new LocalTranslationService();
         _selectedCountry = Countries[0];
         _refreshTimer = new System.Timers.Timer(TimeSpan.FromMinutes(30).TotalMilliseconds) { AutoReset = true };
         _refreshTimer.Elapsed += OnTimerElapsed;
@@ -76,34 +73,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _ = InitializeAsync();
     }
 
-    partial void OnSelectedCountryChanged(Country value) => _ = LoadCountryAsync(value.Code);
-
-    private async Task LoadCountryAsync(string countryCode)
-    {
-        await LoadCachedNewsAsync(countryCode);
-        if (countryCode.Equals("WORLD", StringComparison.OrdinalIgnoreCase) || Articles.Count > 0)
-            return;
-
-        try
-        {
-            await SetUiAsync(() => StatusText = "Загружаем новости выбранной страны…");
-            var articles = await _service.FetchNewsForCountryAsync(countryCode, _lifetime.Token);
-            if (articles.Count > 0)
-            {
-                await Task.Run(() => _repository.SaveNews(articles), _lifetime.Token);
-                await LoadCachedNewsAsync(countryCode);
-                await SetUiAsync(() => StatusText = $"Загружено: {articles.Count} материалов");
-            }
-            else
-                await SetUiAsync(() => StatusText = "Для этой страны API пока не вернул материалы");
-        }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
-        catch (Exception exception)
-        {
-            Debug.WriteLine($"Country refresh failed: {exception}");
-            await SetUiAsync(() => StatusText = "Не удалось загрузить новости этой страны");
-        }
-    }
+    partial void OnSelectedCountryChanged(Country value) => _ = LoadCachedNewsAsync(value.Code);
 
     public void SelectCountryCode(string code)
     {
@@ -193,7 +163,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private async Task OpenArticleAsync(NewsArticle article)
     {
         OpenedArticle = article;
-        OpenedArticleTitle = article.Title;
         OpenedArticleText = article.Description;
         OpenedArticleParagraphs.Clear();
         if (!string.IsNullOrWhiteSpace(article.Description)) OpenedArticleParagraphs.Add(article.Description);
@@ -201,16 +170,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         IsArticleLoading = true;
         try
         {
-            OpenedArticleTitle = await _translationService.TranslateAsync(article.Title, article.LanguageCode, _lifetime.Token);
             var content = await _service.DownloadArticleAsync(article.Url, _lifetime.Token);
             if (content is not null)
             {
                 OpenedArticleParagraphs.Clear();
-                foreach (var paragraph in content.Paragraphs)
-                    OpenedArticleParagraphs.Add(await _translationService.TranslateAsync(paragraph, article.LanguageCode, _lifetime.Token));
+                foreach (var paragraph in content.Paragraphs) OpenedArticleParagraphs.Add(paragraph);
             }
-            else if (OpenedArticleParagraphs.Count > 0)
-                OpenedArticleParagraphs[0] = await _translationService.TranslateAsync(OpenedArticleParagraphs[0], article.LanguageCode, _lifetime.Token);
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception) { Debug.WriteLine($"Read article failed: {exception}"); }
@@ -225,7 +190,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         IsReadingArticle = false;
         OpenedArticle = null;
-        OpenedArticleTitle = string.Empty;
         OpenedArticleText = string.Empty;
         OpenedArticleParagraphs.Clear();
     }
@@ -265,17 +229,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             await SetUiAsync(() =>
             {
                 Articles.Clear();
-                foreach (var article in items)
-                {
-                    article.DisplayTitle = article.Title;
-                    article.DisplayDescription = article.Description;
-                    Articles.Add(article);
-                }
+                foreach (var article in items) Articles.Add(article);
                 if (!IsRefreshing && items.Count == 0)
                     StatusText = "пока что нет новостей для этой страны";
             });
-            _ = TranslateArticlesAsync(items);
-            _ = LoadImagesAsync(items);
+            await LoadImagesAsync(items);
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception)
@@ -283,29 +241,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             Debug.WriteLine($"Cache read failed: {exception}");
             await SetUiAsync(() => StatusText = "Не удалось прочитать локальный кэш новостей");
         }
-    }
-
-    private async Task TranslateArticlesAsync(IReadOnlyList<NewsArticle> items)
-    {
-        try
-        {
-            await Parallel.ForEachAsync(items, new ParallelOptions
-            {
-                MaxDegreeOfParallelism = 3,
-                CancellationToken = _lifetime.Token
-            }, async (article, token) =>
-            {
-                var title = await _translationService.TranslateAsync(article.Title, article.LanguageCode, token);
-                var description = await _translationService.TranslateAsync(article.Description, article.LanguageCode, token);
-                await SetUiAsync(() =>
-                {
-                    article.DisplayTitle = title;
-                    article.DisplayDescription = description;
-                });
-            });
-        }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
-        catch (Exception exception) { Debug.WriteLine($"Background translation failed: {exception}"); }
     }
 
     private async Task LoadImagesAsync(IEnumerable<NewsArticle> items)

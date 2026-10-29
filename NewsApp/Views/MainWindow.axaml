@@ -14,6 +14,7 @@
     <Style Selector="Button.country:pointerover"><Setter Property="Background" Value="#1B2634"/></Style>
     <Style Selector="Border.card"><Setter Property="Background" Value="#151D28"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="18"/><Setter Property="Margin" Value="0,0,0,14"/></Style>
     <Style Selector="Button.link"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#72B7FF"/><Setter Property="Padding" Value="0"/></Style>
+    <Style Selector="Button.articleTitle"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#F4F7FB"/><Setter Property="FontSize" Value="21"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="0"/></Style>
   </Window.Styles>
   <Grid ColumnDefinitions="390,*" ColumnSpacing="26">
     <Border Grid.Column="0" Background="#111821" Padding="18" CornerRadius="0,18,18,0">
@@ -22,7 +23,7 @@
         </StackPanel>
         <controls:GlobeControl x:Name="Globe" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" MinHeight="350"/>
         <TextBlock Grid.Row="2" Text="{Binding SelectedCountry.DisplayName}" HorizontalAlignment="Center" FontSize="20" FontWeight="SemiBold" Foreground="#F4F7FB" Margin="0,10,0,2"/>
-        <Button x:Name="AutoRotationButton" Grid.Row="3" Content="▶ Медленное вращение" Click="OnAutoRotationClick" HorizontalAlignment="Center" Padding="14,8" Margin="0,8,0,4" Background="#1B4F7A" Foreground="White" CornerRadius="7"/>
+        <Button x:Name="AutoRotationButton" Grid.Row="3" Content="▶" ToolTip.Tip="Автоповорот глобуса" Click="OnAutoRotationClick" HorizontalAlignment="Center" Padding="14,8" Margin="0,8,0,4" Background="#1B4F7A" Foreground="White" CornerRadius="7"/>
         <TextBlock Grid.Row="4" Text="Перетаскивание — вручную, колесо — масштаб" Classes="muted" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
       </Grid>
     </Border>
@@ -45,7 +46,7 @@
         </Button>
       </Grid>
       <TextBlock Grid.Row="1" Text="{Binding StatusText}" Classes="muted" Margin="0,22,0,16"/>
-      <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+      <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" IsVisible="{Binding !IsReadingArticle}">
         <ItemsControl ItemsSource="{Binding Articles}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:NewsArticle">
@@ -53,14 +54,14 @@
                 <Grid ColumnDefinitions="*,190" ColumnSpacing="20">
                   <StackPanel Spacing="9">
                     <TextBlock Text="{Binding CountryName}" Foreground="#72B7FF" FontSize="12" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding Title}" FontSize="21" FontWeight="SemiBold" Foreground="#F4F7FB" TextWrapping="Wrap"/>
+                    <Button Classes="articleTitle" Content="{Binding Title}" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/>
                     <TextBlock Text="{Binding Description}" Classes="muted" FontSize="14" TextWrapping="Wrap" MaxLines="3"/>
                     <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,8,0,0">
                       <StackPanel Orientation="Horizontal" Spacing="4">
                         <TextBlock Text="Опубликовано:" Classes="muted"/>
                         <TextBlock Text="{Binding PublishedAtText}" Classes="muted"/>
                       </StackPanel>
-                      <Button Content="Посмотреть новость в интернете →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/>
+                      <Button Content="Читать в приложении →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/>
                     </StackPanel>
                   </StackPanel>
                   <Border Grid.Column="1" Background="#202B39" CornerRadius="10" ClipToBounds="True">
@@ -72,6 +73,21 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </ScrollViewer>
+      <Grid Grid.Row="2" IsVisible="{Binding IsReadingArticle}" RowDefinitions="Auto,Auto,*" RowSpacing="14">
+        <Button Content="← Назад к новостям" Command="{Binding CloseArticleCommand}" HorizontalAlignment="Left" Padding="14,8"/>
+        <StackPanel Grid.Row="1" Spacing="8">
+          <TextBlock Text="{Binding OpenedArticle.CountryName}" Foreground="#72B7FF" FontSize="12" FontWeight="Bold"/>
+          <TextBlock Text="{Binding OpenedArticle.Title}" FontSize="28" FontWeight="Bold" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding OpenedArticle.PublishedAtText}" Classes="muted"/>
+        </StackPanel>
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="14" MaxWidth="850">
+            <Image Source="{Binding OpenedArticle.ImageBitmap}" Height="250" Stretch="UniformToFill"/>
+            <TextBlock Text="{Binding IsArticleLoading, StringFormat='Загрузка полного текста: {0}'}" Classes="muted" IsVisible="{Binding IsArticleLoading}"/>
+            <TextBlock Text="{Binding OpenedArticleText}" FontSize="17" LineHeight="27" TextWrapping="Wrap"/>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
     </Grid>
   </Grid>
 </Window>

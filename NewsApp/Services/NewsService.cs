@@ -134,6 +134,39 @@ public sealed class NewsService
         };
     }
 
+    public async Task<string?> DownloadArticleTextAsync(string articleUrl, CancellationToken cancellationToken = default)
+    {
+        if (!Uri.TryCreate(articleUrl, UriKind.Absolute, out var uri)) return null;
+        try
+        {
+            using var response = await _httpClient.GetAsync(uri, cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            var charset = response.Content.Headers.ContentType?.CharSet?.Trim('"', '\'');
+            Encoding encoding;
+            try { encoding = string.IsNullOrWhiteSpace(charset) ? Encoding.UTF8 : Encoding.GetEncoding(charset); }
+            catch (ArgumentException) { encoding = Encoding.UTF8; }
+
+            var document = new HtmlDocument();
+            document.LoadHtml(encoding.GetString(bytes));
+            foreach (var node in document.DocumentNode.SelectNodes("//script|//style|//noscript|//nav|//footer|//header|//aside|//form") ?? Enumerable.Empty<HtmlNode>())
+                node.Remove();
+
+            var root = document.DocumentNode.SelectSingleNode("//article")
+                ?? document.DocumentNode.SelectSingleNode("//main")
+                ?? document.DocumentNode;
+            var paragraphs = root.SelectNodes(".//p")?
+                .Select(x => HtmlEntity.DeEntitize(x.InnerText).Trim())
+                .Where(x => x.Length >= 35)
+                .Distinct(StringComparer.Ordinal)
+                .Take(80)
+                .ToList();
+            return paragraphs is { Count: > 0 } ? string.Join(Environment.NewLine + Environment.NewLine, paragraphs) : null;
+        }
+        catch (HttpRequestException) { return null; }
+        catch (TaskCanceledException) { return null; }
+    }
+
     private static string CountryNameFor(string code) => code switch
     {
         "US" => "США", "RU" => "Россия", "DE" => "Германия", "FR" => "Франция", "GB" => "Великобритания",

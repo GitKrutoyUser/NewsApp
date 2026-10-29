@@ -41,6 +41,6 @@ public partial class MainWindow : Window
     private void OnAutoRotationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         Globe.ToggleAutoRotation();
-        AutoRotationButton.Content = Globe.IsAutoRotating ? "■ Остановить вращение" : "▶ Медленное вращение";
+        AutoRotationButton.Content = Globe.IsAutoRotating ? "■" : "▶";
     }
 }

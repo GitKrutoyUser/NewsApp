@@ -54,6 +54,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private Country _selectedCountry;
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private string _statusText = "Проверяем локальный кэш…";
+    [ObservableProperty] private bool _isReadingArticle;
+    [ObservableProperty] private NewsArticle? _openedArticle;
+    [ObservableProperty] private string _openedArticleText = string.Empty;
+    [ObservableProperty] private bool _isArticleLoading;
 
     public MainWindowViewModel() : this(new NewsRepository(), new NewsService()) { }
 
@@ -155,14 +159,31 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private void OpenArticle(NewsArticle article)
+    private async Task OpenArticleAsync(NewsArticle article)
     {
+        OpenedArticle = article;
+        OpenedArticleText = article.Description;
+        IsReadingArticle = true;
+        IsArticleLoading = true;
         try
         {
-            if (Uri.TryCreate(article.Url, UriKind.Absolute, out var uri))
-                Process.Start(new ProcessStartInfo(uri.ToString()) { UseShellExecute = true });
+            var text = await _service.DownloadArticleTextAsync(article.Url, _lifetime.Token);
+            if (!string.IsNullOrWhiteSpace(text)) OpenedArticleText = text;
         }
-        catch (Exception exception) { Debug.WriteLine($"Open article failed: {exception}"); }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception) { Debug.WriteLine($"Read article failed: {exception}"); }
+        finally
+        {
+            IsArticleLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CloseArticle()
+    {
+        IsReadingArticle = false;
+        OpenedArticle = null;
+        OpenedArticleText = string.Empty;
     }
 
     private async void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)

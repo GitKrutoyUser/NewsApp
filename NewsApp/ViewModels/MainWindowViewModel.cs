@@ -259,13 +259,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 CancellationToken = _lifetime.Token
             }, async (article, token) =>
             {
-                if (string.IsNullOrWhiteSpace(article.ImageUrl))
-                {
-                    article.ImageUrl = await _service.FindArticleImageAsync(article.Url, token);
-                    if (!string.IsNullOrWhiteSpace(article.ImageUrl))
-                        await Task.Run(() => _repository.UpdateImageUrl(article.Url, article.ImageUrl), token);
-                }
                 var bitmap = await _service.DownloadImageAsync(article.ImageUrl, token);
+                if (bitmap is null)
+                {
+                    var fallbackImageUrl = await _service.FindArticleImageAsync(article.Url, token);
+                    if (!string.IsNullOrWhiteSpace(fallbackImageUrl) && !fallbackImageUrl.Equals(article.ImageUrl, StringComparison.OrdinalIgnoreCase))
+                    {
+                        article.ImageUrl = fallbackImageUrl;
+                        await Task.Run(() => _repository.UpdateImageUrl(article.Url, fallbackImageUrl), token);
+                        bitmap = await _service.DownloadImageAsync(fallbackImageUrl, token);
+                    }
+                }
                 if (bitmap is not null)
                     await SetUiAsync(() => article.ImageBitmap = bitmap);
             });

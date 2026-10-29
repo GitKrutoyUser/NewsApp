@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using NewsApp.ViewModels;
 
 namespace NewsApp.Views;
@@ -42,5 +43,10 @@ public partial class MainWindow : Window
     {
         Globe.ToggleAutoRotation();
         AutoRotationButton.Content = Globe.IsAutoRotating ? "■" : "▶";
+    }
+
+    private void OnArticleScrollToTop(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        ArticleScrollViewer.Offset = new Vector(0, 0);
     }
 }

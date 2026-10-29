@@ -63,7 +63,10 @@
                         <TextBlock Text="Опубликовано:" Classes="muted"/>
                         <TextBlock Text="{Binding PublishedAtText}" Classes="muted"/>
                       </StackPanel>
-                      <Button Content="Читать в приложении →" Classes="link" HorizontalAlignment="Left" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/>
+                      <StackPanel Orientation="Horizontal" Spacing="14">
+                        <Button Content="Читать в приложении →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/>
+                        <Button Content="Читать на сайте ↗" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleInBrowserCommand}" CommandParameter="{Binding}"/>
+                      </StackPanel>
                     </StackPanel>
                   </StackPanel>
                   <Border Grid.Column="1" Background="#202B39" CornerRadius="10" ClipToBounds="True">
@@ -75,10 +78,14 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </ScrollViewer>
-      <ScrollViewer Grid.Row="2" IsVisible="{Binding IsReadingArticle}" VerticalScrollBarVisibility="Auto">
-        <Border Background="#111A25" CornerRadius="16" Padding="28" HorizontalAlignment="Center" MaxWidth="900">
-          <StackPanel Spacing="18">
-            <Button Content="← Назад к новостям" Command="{Binding CloseArticleCommand}" HorizontalAlignment="Left" Padding="14,8"/>
+      <Grid Grid.Row="2" IsVisible="{Binding IsReadingArticle}" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+        <StackPanel Spacing="10" VerticalAlignment="Top">
+          <Button Content="←" ToolTip.Tip="Назад к новостям" Command="{Binding CloseArticleCommand}" Padding="12,9" FontSize="18"/>
+          <Button Content="↑" ToolTip.Tip="В начало статьи" Click="OnArticleScrollToTop" Padding="12,9" FontSize="18"/>
+        </StackPanel>
+        <ScrollViewer x:Name="ArticleScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto">
+          <Border Background="#111A25" CornerRadius="16" Padding="28" HorizontalAlignment="Center" MaxWidth="900">
+            <StackPanel Spacing="18">
             <Border Background="#182536" CornerRadius="12" Padding="20">
               <StackPanel Spacing="10">
                 <TextBlock Text="{Binding OpenedArticle.CountryName}" Foreground="#72B7FF" FontSize="13" FontWeight="Bold"/>
@@ -87,20 +94,12 @@
                   <TextBlock Text="{Binding OpenedArticle.PublishedAtText}" Classes="muted"/>
                   <TextBlock Text="•" Classes="muted"/>
                   <TextBlock Text="Встроенное чтение" Classes="muted"/>
+                  <Button Content="Открыть на сайте ↗" Classes="link" Command="{Binding OpenArticleInBrowserCommand}" CommandParameter="{Binding OpenedArticle}"/>
                 </StackPanel>
               </StackPanel>
             </Border>
             <Image Source="{Binding OpenedArticle.ImageBitmap}" MaxHeight="360" Stretch="Uniform" HorizontalAlignment="Center"/>
             <TextBlock Text="Загрузка материалов статьи…" Classes="muted" IsVisible="{Binding IsArticleLoading}"/>
-            <ItemsControl ItemsSource="{Binding OpenedArticleImages}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Border Background="#182536" CornerRadius="10" Padding="6" Margin="0,0,0,10">
-                    <Image Source="{Binding}" MaxHeight="360" Stretch="Uniform"/>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
             <ItemsControl ItemsSource="{Binding OpenedArticleParagraphs}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -109,8 +108,9 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </StackPanel>
-        </Border>
-      </ScrollViewer>
+          </Border>
+        </ScrollViewer>
+      </Grid>
     </Grid>
   </Grid>
 </Window>

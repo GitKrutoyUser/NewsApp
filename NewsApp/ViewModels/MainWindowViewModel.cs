@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -52,7 +51,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<NewsArticle> Articles { get; } = new();
     public ObservableCollection<string> OpenedArticleParagraphs { get; } = new();
-    public ObservableCollection<Bitmap> OpenedArticleImages { get; } = new();
 
     [ObservableProperty] private Country _selectedCountry;
     [ObservableProperty] private bool _isRefreshing;
@@ -168,7 +166,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         OpenedArticleText = article.Description;
         OpenedArticleParagraphs.Clear();
         if (!string.IsNullOrWhiteSpace(article.Description)) OpenedArticleParagraphs.Add(article.Description);
-        OpenedArticleImages.Clear();
         IsReadingArticle = true;
         IsArticleLoading = true;
         try
@@ -178,12 +175,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             {
                 OpenedArticleParagraphs.Clear();
                 foreach (var paragraph in content.Paragraphs) OpenedArticleParagraphs.Add(paragraph);
-                foreach (var imageUrl in content.ImageUrls)
-                {
-                    if (string.Equals(imageUrl, article.ImageUrl, StringComparison.OrdinalIgnoreCase)) continue;
-                    var bitmap = await _service.DownloadImageAsync(imageUrl, _lifetime.Token);
-                    if (bitmap is not null) OpenedArticleImages.Add(bitmap);
-                }
             }
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
@@ -201,7 +192,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         OpenedArticle = null;
         OpenedArticleText = string.Empty;
         OpenedArticleParagraphs.Clear();
-        OpenedArticleImages.Clear();
+    }
+
+    [RelayCommand]
+    private void OpenArticleInBrowser(NewsArticle article)
+    {
+        try
+        {
+            if (Uri.TryCreate(article.Url, UriKind.Absolute, out var uri))
+                Process.Start(new ProcessStartInfo(uri.ToString()) { UseShellExecute = true });
+        }
+        catch (Exception exception) { Debug.WriteLine($"Open article in browser failed: {exception}"); }
     }
 
     private async void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)

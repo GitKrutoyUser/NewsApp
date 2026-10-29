@@ -128,7 +128,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 }
             }
             await SetUiAsync(() => { IsRefreshing = true; StatusText = "Новости обновляются"; });
-            var news = await _service.FetchNewsAsync(_lifetime.Token);
+            var fetchedNews = await _service.FetchNewsAsync(_lifetime.Token);
+            var news = await _service.CompleteDescriptionsAsync(fetchedNews, _lifetime.Token);
             var knownUrls = await Task.Run(() => _repository.GetKnownUrls(), _lifetime.Token);
             var newCountries = news.Where(x => !knownUrls.Contains(x.Url)).Select(x => x.CountryCode)
                 .Where(x => x != "WORLD").ToHashSet(StringComparer.OrdinalIgnoreCase);

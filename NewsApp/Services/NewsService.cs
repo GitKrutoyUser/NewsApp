@@ -113,6 +113,26 @@ public sealed class NewsService
         catch (TaskCanceledException) { return null; }
     }
 
+    public async Task<IReadOnlyList<NewsArticle>> CompleteDescriptionsAsync(
+        IReadOnlyList<NewsArticle> articles,
+        CancellationToken cancellationToken = default)
+    {
+        await Parallel.ForEachAsync(articles.Where(x => string.IsNullOrWhiteSpace(x.Description)), new ParallelOptions
+        {
+            MaxDegreeOfParallelism = 6,
+            CancellationToken = cancellationToken
+        }, async (article, token) =>
+        {
+            var description = await FindArticleDescriptionAsync(article.Url, token);
+            if (!string.IsNullOrWhiteSpace(description))
+                article.Description = description;
+        });
+
+        return articles
+            .Where(x => !string.IsNullOrWhiteSpace(x.Description))
+            .ToList();
+    }
+
     private async Task<List<NewsApiItem>> FetchCountryAsync(string countryCode, CancellationToken cancellationToken)
     {
         for (var attempt = 0; attempt < 3; attempt++)

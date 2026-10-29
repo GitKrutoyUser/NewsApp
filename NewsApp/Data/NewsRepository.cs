@@ -59,6 +59,9 @@ public sealed class NewsRepository
             );
             """;
         command.ExecuteNonQuery();
+        using var cleanup = connection.CreateCommand();
+        cleanup.CommandText = "DELETE FROM news WHERE description IS NULL OR TRIM(description) = '';";
+        cleanup.ExecuteNonQuery();
     }
 
     public void SaveNews(IEnumerable<NewsArticle> articles)
@@ -92,7 +95,9 @@ public sealed class NewsRepository
         var published = command.Parameters.Add("$published_at", SqliteType.Text);
         var image = command.Parameters.Add("$image_url", SqliteType.Text);
 
-        foreach (var article in articles.Where(x => !string.IsNullOrWhiteSpace(x.Url)))
+        foreach (var article in articles.Where(x =>
+                     !string.IsNullOrWhiteSpace(x.Url) &&
+                     !string.IsNullOrWhiteSpace(x.Description)))
         {
             url.Value = article.Url;
             country.Value = article.CountryCode;

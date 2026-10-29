@@ -14,7 +14,7 @@
     <Style Selector="Button.country:pointerover"><Setter Property="Background" Value="#1B2634"/></Style>
     <Style Selector="Border.card"><Setter Property="Background" Value="#151D28"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="18"/><Setter Property="Margin" Value="0,0,0,14"/></Style>
     <Style Selector="Button.link"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#72B7FF"/><Setter Property="Padding" Value="0"/></Style>
-    <Style Selector="Button.articleTitle"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#F4F7FB"/><Setter Property="FontSize" Value="21"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="0"/></Style>
+    <Style Selector="Button.articleTitle"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#F4F7FB"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="0"/></Style>
   </Window.Styles>
   <Grid ColumnDefinitions="390,*" ColumnSpacing="26">
     <Border Grid.Column="0" Background="#111821" Padding="18" CornerRadius="0,18,18,0">
@@ -54,18 +54,20 @@
                 <Grid ColumnDefinitions="*,190" ColumnSpacing="20">
                   <StackPanel Spacing="9">
                     <TextBlock Text="{Binding CountryName}" Foreground="#72B7FF" FontSize="12" FontWeight="Bold"/>
-                    <Button Classes="articleTitle" Content="{Binding Title}" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/>
-                    <TextBlock Text="{Binding Description}" Classes="muted" FontSize="14" TextWrapping="Wrap" MaxLines="3"/>
-                    <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,8,0,0">
+                    <Button Classes="articleTitle" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}">
+                      <TextBlock Text="{Binding Title}" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    </Button>
+                    <TextBlock Text="{Binding Description}" Classes="muted" FontSize="14" TextWrapping="Wrap"/>
+                    <StackPanel Spacing="8" Margin="0,8,0,0">
                       <StackPanel Orientation="Horizontal" Spacing="4">
                         <TextBlock Text="Опубликовано:" Classes="muted"/>
                         <TextBlock Text="{Binding PublishedAtText}" Classes="muted"/>
                       </StackPanel>
-                      <Button Content="Читать в приложении →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/>
+                      <Button Content="Читать в приложении →" Classes="link" HorizontalAlignment="Left" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/>
                     </StackPanel>
                   </StackPanel>
                   <Border Grid.Column="1" Background="#202B39" CornerRadius="10" ClipToBounds="True">
-                    <Image Source="{Binding ImageBitmap}" Stretch="UniformToFill" MinHeight="130"/>
+                    <Image Source="{Binding ImageBitmap}" Stretch="Uniform" Width="190" MaxHeight="180" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                   </Border>
                 </Grid>
               </Border>
@@ -88,7 +90,7 @@
                 </StackPanel>
               </StackPanel>
             </Border>
-            <Image Source="{Binding OpenedArticle.ImageBitmap}" Height="300" Stretch="UniformToFill"/>
+            <Image Source="{Binding OpenedArticle.ImageBitmap}" MaxHeight="360" Stretch="Uniform" HorizontalAlignment="Center"/>
             <TextBlock Text="Загрузка материалов статьи…" Classes="muted" IsVisible="{Binding IsArticleLoading}"/>
             <ItemsControl ItemsSource="{Binding OpenedArticleImages}">
               <ItemsControl.ItemTemplate>

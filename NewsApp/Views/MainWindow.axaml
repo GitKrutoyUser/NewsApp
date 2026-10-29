@@ -33,7 +33,14 @@
           </StackPanel>
           <TextBlock Text="Свежие события из локального кэша WorldPulse" Classes="muted" Margin="0,6,0,0"/>
         </StackPanel>
-        <Button Grid.Column="1" Content="Обновить" Command="{Binding RefreshCommand}" Padding="18,11" Background="#2477D4" Foreground="White" CornerRadius="8" IsEnabled="{Binding !IsRefreshing}"/>
+        <Button Grid.Column="1" Content="⟳" Padding="15,9" FontSize="20" ToolTip.Tip="Выбрать способ обновления" Background="#2477D4" Foreground="White" CornerRadius="8" IsEnabled="{Binding !IsRefreshing}">
+          <Button.Flyout>
+            <MenuFlyout>
+              <MenuItem Header="Показать из базы" Command="{Binding LoadCacheCommand}"/>
+              <MenuItem Header="Обновить через API" Command="{Binding RefreshCommand}"/>
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
       </Grid>
       <TextBlock Grid.Row="1" Text="{Binding StatusText}" Classes="muted" Margin="0,22,0,16"/>
       <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">

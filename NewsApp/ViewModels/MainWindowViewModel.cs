@@ -93,6 +93,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private Task RefreshAsync() => RefreshInternalAsync(true);
 
+    [RelayCommand]
+    private async Task LoadCacheAsync()
+    {
+        await LoadCachedNewsAsync(SelectedCountry.Code);
+        await SetUiAsync(() => StatusText = Articles.Count == 0
+            ? "В базе нет новостей для выбранного раздела"
+            : $"Показано из базы: {Articles.Count} материалов");
+    }
+
     private async Task RefreshInternalAsync(bool manual)
     {
         if (!await _refreshGate.WaitAsync(0)) return;

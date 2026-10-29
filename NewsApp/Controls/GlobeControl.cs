@@ -241,16 +241,13 @@ public sealed class GlobeControl : Control
             _dragging = false;
             if (!_moved && e.InitialPressMouseButton == MouseButton.Left)
             {
-                var code = HitTestCountry(e.GetPosition(this));
-                if (code is not null)
-                {
-                    SelectedCountryCode = code;
-                    SelectedCountryName = code == "WORLD"
-                        ? "Мир"
-                        : _countries.FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase))?.Name ?? code;
-                    CountrySelected?.Invoke(this, code);
-                    InvalidateVisual();
-                }
+                var code = HitTestCountry(e.GetPosition(this)) ?? "WORLD";
+                SelectedCountryCode = code;
+                SelectedCountryName = code == "WORLD"
+                    ? "Мир"
+                    : _countries.FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase))?.Name ?? code;
+                CountrySelected?.Invoke(this, code);
+                InvalidateVisual();
             }
             e.Handled = true;
         }

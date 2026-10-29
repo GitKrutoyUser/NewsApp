@@ -86,7 +86,11 @@ public partial class MainWindow : Window
     private void OnAutoRotationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         Globe.ToggleAutoRotation();
-        AutoRotationButton.Content = Globe.IsAutoRotating ? "■" : "↻";
+        AutoRotationButton.Content = new TextBlock
+        {
+            Text = Globe.IsAutoRotating ? "■" : "▶",
+            Classes = { "toolbarIcon" }
+        };
     }
 
     private void OnArticleScrollToTop(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

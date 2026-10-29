@@ -12,8 +12,11 @@ public partial class NewsArticle : ObservableObject
     public string LanguageCode { get; set; } = "en";
     public string Title { get; set; } = "Без заголовка";
     public string Description { get; set; } = string.Empty;
-    public string DisplayTitle { get; set; } = string.Empty;
-    public string DisplayDescription { get; set; } = string.Empty;
+    [ObservableProperty]
+    private string _displayTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _displayDescription = string.Empty;
     public DateTimeOffset PublishedAt { get; set; } = DateTimeOffset.UtcNow;
     public string? ImageUrl { get; set; }
     public string PublishedAtText => PublishedAt.ToLocalTime().ToString("dd.MM.yyyy");

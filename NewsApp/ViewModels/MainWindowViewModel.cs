@@ -76,7 +76,34 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _ = InitializeAsync();
     }
 
-    partial void OnSelectedCountryChanged(Country value) => _ = LoadCachedNewsAsync(value.Code);
+    partial void OnSelectedCountryChanged(Country value) => _ = LoadCountryAsync(value.Code);
+
+    private async Task LoadCountryAsync(string countryCode)
+    {
+        await LoadCachedNewsAsync(countryCode);
+        if (countryCode.Equals("WORLD", StringComparison.OrdinalIgnoreCase) || Articles.Count > 0)
+            return;
+
+        try
+        {
+            await SetUiAsync(() => StatusText = "Загружаем новости выбранной страны…");
+            var articles = await _service.FetchNewsForCountryAsync(countryCode, _lifetime.Token);
+            if (articles.Count > 0)
+            {
+                await Task.Run(() => _repository.SaveNews(articles), _lifetime.Token);
+                await LoadCachedNewsAsync(countryCode);
+                await SetUiAsync(() => StatusText = $"Загружено: {articles.Count} материалов");
+            }
+            else
+                await SetUiAsync(() => StatusText = "Для этой страны API пока не вернул материалы");
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"Country refresh failed: {exception}");
+            await SetUiAsync(() => StatusText = "Не удалось загрузить новости этой страны");
+        }
+    }
 
     public void SelectCountryCode(string code)
     {
@@ -235,23 +262,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         try
         {
             var items = await Task.Run(() => _repository.GetNewsByCountry(countryCode), _lifetime.Token);
-            await Parallel.ForEachAsync(items, new ParallelOptions
-            {
-                MaxDegreeOfParallelism = 4,
-                CancellationToken = _lifetime.Token
-            }, async (article, token) =>
-            {
-                article.DisplayTitle = await _translationService.TranslateAsync(article.Title, article.LanguageCode, token);
-                article.DisplayDescription = await _translationService.TranslateAsync(article.Description, article.LanguageCode, token);
-            });
             await SetUiAsync(() =>
             {
                 Articles.Clear();
-                foreach (var article in items) Articles.Add(article);
+                foreach (var article in items)
+                {
+                    article.DisplayTitle = article.Title;
+                    article.DisplayDescription = article.Description;
+                    Articles.Add(article);
+                }
                 if (!IsRefreshing && items.Count == 0)
                     StatusText = "пока что нет новостей для этой страны";
             });
-            await LoadImagesAsync(items);
+            _ = TranslateArticlesAsync(items);
+            _ = LoadImagesAsync(items);
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception)
@@ -259,6 +283,29 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             Debug.WriteLine($"Cache read failed: {exception}");
             await SetUiAsync(() => StatusText = "Не удалось прочитать локальный кэш новостей");
         }
+    }
+
+    private async Task TranslateArticlesAsync(IReadOnlyList<NewsArticle> items)
+    {
+        try
+        {
+            await Parallel.ForEachAsync(items, new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 3,
+                CancellationToken = _lifetime.Token
+            }, async (article, token) =>
+            {
+                var title = await _translationService.TranslateAsync(article.Title, article.LanguageCode, token);
+                var description = await _translationService.TranslateAsync(article.Description, article.LanguageCode, token);
+                await SetUiAsync(() =>
+                {
+                    article.DisplayTitle = title;
+                    article.DisplayDescription = description;
+                });
+            });
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception) { Debug.WriteLine($"Background translation failed: {exception}"); }
     }
 
     private async Task LoadImagesAsync(IEnumerable<NewsArticle> items)

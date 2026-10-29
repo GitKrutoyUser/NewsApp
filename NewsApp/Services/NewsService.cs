@@ -82,41 +82,18 @@ public sealed class NewsService
     public async Task<IReadOnlyList<NewsArticle>> FetchNewsAsync(CancellationToken cancellationToken = default)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(90));
+        timeout.CancelAfter(TimeSpan.FromSeconds(45));
         var requestToken = timeout.Token;
         var articlesFromApi = new List<NewsApiItem>();
         try
         {
             await Parallel.ForEachAsync(FeedGroups, new ParallelOptions
             {
-                MaxDegreeOfParallelism = 4,
+                MaxDegreeOfParallelism = 8,
                 CancellationToken = requestToken
             }, async (countryCode, token) =>
             {
                 var items = await FetchGroupAsync(countryCode, token);
-                lock (articlesFromApi) articlesFromApi.AddRange(items);
-            });
-        }
-        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
-
-        var fetchedCountries = articlesFromApi
-            .Select(x => x.Country?.ToUpperInvariant())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var missingGroups = AllCountryCodes
-            .Where(code => !fetchedCountries.Contains(code))
-            .Chunk(40)
-            .Select(chunk => new FeedGroup(string.Empty, string.Join(',', chunk)))
-            .ToList();
-        try
-        {
-            await Parallel.ForEachAsync(missingGroups, new ParallelOptions
-            {
-                MaxDegreeOfParallelism = 3,
-                CancellationToken = requestToken
-            }, async (group, token) =>
-            {
-                var items = await FetchGroupAsync(group, token);
                 lock (articlesFromApi) articlesFromApi.AddRange(items);
             });
         }
@@ -131,20 +108,24 @@ public sealed class NewsService
             .Cast<NewsArticle>()
             .ToList();
 
-        try
-        {
-            await Parallel.ForEachAsync(articles, new ParallelOptions
-            {
-                MaxDegreeOfParallelism = 6,
-                CancellationToken = requestToken
-            }, async (article, token) =>
-            {
-                if (string.IsNullOrWhiteSpace(article.ImageUrl))
-                    article.ImageUrl = await TryGetOgImageAsync(article.Url, token);
-            });
-        }
-        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
         return articles;
+    }
+
+    public async Task<IReadOnlyList<NewsArticle>> FetchNewsForCountryAsync(string countryCode, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(countryCode) || countryCode.Equals("WORLD", StringComparison.OrdinalIgnoreCase))
+            return Array.Empty<NewsArticle>();
+
+        var code = countryCode.ToUpperInvariant();
+        var items = await FetchGroupAsync(new FeedGroup(PrimaryLanguage(code), code), cancellationToken);
+        return items
+            .Where(x => !string.IsNullOrWhiteSpace(x.Url))
+            .GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase)
+            .Select(x => x.First())
+            .Select(ToArticle)
+            .Where(x => x is not null)
+            .Cast<NewsArticle>()
+            .ToList();
     }
 
     public async Task<Bitmap?> DownloadImageAsync(string? imageUrl, CancellationToken cancellationToken = default)

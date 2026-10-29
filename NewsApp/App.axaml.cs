@@ -18,7 +18,7 @@ public partial class App : Application
         {
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(new NewsRepository(), new NewsService())
+                DataContext = new MainWindowViewModel(new NewsRepository(), new NewsService(), new LocalTranslationService())
             };
         }
         base.OnFrameworkInitializationCompleted();

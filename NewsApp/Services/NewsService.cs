@@ -10,6 +10,8 @@ namespace NewsApp.Services;
 public sealed class NewsService
 {
     private const string ApiUrl = "https://freenewsapi.ai/v1/search";
+    private const string AllCountryCodesText = "AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KP KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PS PT PW PY QA RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VC VE VN VU WS YE ZA ZM ZW";
+    private static readonly string[] AllCountryCodes = AllCountryCodesText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
     private static readonly IReadOnlyList<FeedGroup> FeedGroups = BuildFeedGroups();
     private readonly HttpClient _httpClient;
 
@@ -17,8 +19,7 @@ public sealed class NewsService
 
     private static IReadOnlyList<FeedGroup> BuildFeedGroups()
     {
-        const string allCodes = "AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KP KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PS PT PW PY QA RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VC VE VN VU WS YE ZA ZM ZW";
-        var byLanguage = allCodes.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        var byLanguage = AllCountryCodes
             .Select(code => (Code: code, Language: PrimaryLanguage(code)))
             .GroupBy(x => x.Language, StringComparer.OrdinalIgnoreCase);
 
@@ -98,6 +99,29 @@ public sealed class NewsService
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
 
+        var fetchedCountries = articlesFromApi
+            .Select(x => x.Country?.ToUpperInvariant())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missingGroups = AllCountryCodes
+            .Where(code => !fetchedCountries.Contains(code))
+            .Chunk(40)
+            .Select(chunk => new FeedGroup(string.Empty, string.Join(',', chunk)))
+            .ToList();
+        try
+        {
+            await Parallel.ForEachAsync(missingGroups, new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 3,
+                CancellationToken = requestToken
+            }, async (group, token) =>
+            {
+                var items = await FetchGroupAsync(group, token);
+                lock (articlesFromApi) articlesFromApi.AddRange(items);
+            });
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
+
         var articles = articlesFromApi
             .Where(x => !string.IsNullOrWhiteSpace(x.Url))
             .GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase)
@@ -144,7 +168,8 @@ public sealed class NewsService
         {
             try
             {
-                using var response = await _httpClient.GetAsync($"{ApiUrl}?lang={group.Language}&country={group.Countries}&size=50", cancellationToken);
+                var language = string.IsNullOrWhiteSpace(group.Language) ? string.Empty : $"lang={group.Language}&";
+                using var response = await _httpClient.GetAsync($"{ApiUrl}?{language}country={group.Countries}&size=50", cancellationToken);
                 var temporaryFailure = response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500;
                 if (temporaryFailure && attempt < 2)
                 {
@@ -183,6 +208,7 @@ public sealed class NewsService
             Url = item.Url,
             CountryCode = country,
             CountryName = CountryNameFor(country),
+            LanguageCode = string.IsNullOrWhiteSpace(item.Language) ? "en" : item.Language.ToLowerInvariant(),
             Title = item.Title ?? "Без заголовка",
             Description = item.Description ?? string.Empty,
             PublishedAt = publishedAt,

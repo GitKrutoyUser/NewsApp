@@ -55,9 +55,9 @@
                   <StackPanel Spacing="9">
                     <TextBlock Text="{Binding CountryName}" Foreground="#72B7FF" FontSize="12" FontWeight="Bold"/>
                     <Button Classes="articleTitle" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}">
-                      <TextBlock Text="{Binding Title}" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                      <TextBlock Text="{Binding DisplayTitle}" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap"/>
                     </Button>
-                    <TextBlock Text="{Binding Description}" Classes="muted" FontSize="14" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding DisplayDescription}" Classes="muted" FontSize="14" TextWrapping="Wrap"/>
                     <StackPanel Spacing="8" Margin="0,8,0,0">
                       <StackPanel Orientation="Horizontal" Spacing="4">
                         <TextBlock Text="Опубликовано:" Classes="muted"/>
@@ -89,7 +89,7 @@
             <Border Background="#182536" CornerRadius="12" Padding="20">
               <StackPanel Spacing="10">
                 <TextBlock Text="{Binding OpenedArticle.CountryName}" Foreground="#72B7FF" FontSize="13" FontWeight="Bold"/>
-                <TextBlock Text="{Binding OpenedArticle.Title}" FontSize="30" FontWeight="Bold" Foreground="#F7FAFD" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding OpenedArticleTitle}" FontSize="30" FontWeight="Bold" Foreground="#F7FAFD" TextWrapping="Wrap"/>
                 <StackPanel Orientation="Horizontal" Spacing="12">
                   <TextBlock Text="{Binding OpenedArticle.PublishedAtText}" Classes="muted"/>
                   <TextBlock Text="•" Classes="muted"/>

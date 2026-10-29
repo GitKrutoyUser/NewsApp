@@ -42,7 +42,6 @@ public sealed class NewsService
         catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
 
         var articles = articlesFromApi
-            .Where(x => string.Equals(x.Language, "ru", StringComparison.OrdinalIgnoreCase))
             .Where(x => !string.IsNullOrWhiteSpace(x.Url))
             .GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase)
             .Select(x => x.First())
@@ -51,19 +50,6 @@ public sealed class NewsService
             .Cast<NewsArticle>()
             .ToList();
 
-        try
-        {
-            await Parallel.ForEachAsync(articles, new ParallelOptions
-            {
-                MaxDegreeOfParallelism = 6,
-                CancellationToken = requestToken
-            }, async (article, token) =>
-            {
-                if (string.IsNullOrWhiteSpace(article.ImageUrl))
-                    article.ImageUrl = await TryGetOgImageAsync(article.Url, token);
-            });
-        }
-        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
         return articles;
     }
 

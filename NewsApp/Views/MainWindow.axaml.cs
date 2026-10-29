@@ -11,7 +11,11 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
-        Closed += (_, _) => (DataContext as IDisposable)?.Dispose();
+        Closed += (_, _) =>
+        {
+            Globe.StopAutoRotation();
+            (DataContext as IDisposable)?.Dispose();
+        };
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -33,4 +37,10 @@ public partial class MainWindow : Window
         _viewModel?.SelectCountryCode(countryCode, Globe.SelectedCountryName);
 
     private void OnNewCountriesChanged(object? sender, IReadOnlySet<string> codes) => Globe.MarkNewCountries(codes);
+
+    private void OnAutoRotationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        Globe.ToggleAutoRotation();
+        AutoRotationButton.Content = Globe.IsAutoRotating ? "■ Остановить вращение" : "▶ Медленное вращение";
+    }
 }

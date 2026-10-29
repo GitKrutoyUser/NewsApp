@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Platform;
+using Avalonia.Threading;
 
 namespace NewsApp.Controls;
 
@@ -27,11 +28,13 @@ public sealed class GlobeControl : Control
     private double _pitch = 0.12;
     private double _zoom = 1.0;
     private readonly HashSet<string> _newCountryCodes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly DispatcherTimer _rotationTimer;
 
     public event EventHandler<string>? CountrySelected;
 
     public string? SelectedCountryCode { get; private set; }
     public string? SelectedCountryName { get; private set; }
+    public bool IsAutoRotating { get; private set; }
 
     public void MarkNewCountries(IEnumerable<string> codes)
     {
@@ -44,6 +47,25 @@ public sealed class GlobeControl : Control
     {
         Focusable = true;
         LoadGeoJson();
+        _rotationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        _rotationTimer.Tick += (_, _) =>
+        {
+            _yaw += 0.0045;
+            InvalidateVisual();
+        };
+    }
+
+    public void ToggleAutoRotation()
+    {
+        IsAutoRotating = !IsAutoRotating;
+        if (IsAutoRotating) _rotationTimer.Start();
+        else _rotationTimer.Stop();
+    }
+
+    public void StopAutoRotation()
+    {
+        IsAutoRotating = false;
+        _rotationTimer.Stop();
     }
 
     private void LoadGeoJson()
@@ -100,7 +122,6 @@ public sealed class GlobeControl : Control
         var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
         var radius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * _zoom);
         context.DrawEllipse(new SolidColorBrush(Color.Parse("#13253C")), new Pen(new SolidColorBrush(Color.Parse("#3B79AF")), 2), center, radius, radius);
-        DrawGlobeGrid(context, center, radius);
 
         var occupiedLabels = new List<Rect>();
         foreach (var country in _countries.OrderByDescending(x => x.SizeScore))
@@ -125,6 +146,7 @@ public sealed class GlobeControl : Control
             }
         }
 
+        DrawGlobeGrid(context, center, radius);
         context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.Parse("#6FA8D2")), 1), center, radius, radius);
     }
 
@@ -136,13 +158,47 @@ public sealed class GlobeControl : Control
         return new SolidColorBrush(Color.Parse(palette[Math.Abs(hash) % palette.Length]));
     }
 
-    private static void DrawGlobeGrid(DrawingContext context, Point center, double radius)
+    private void DrawGlobeGrid(DrawingContext context, Point center, double radius)
     {
         var gridPen = new Pen(new SolidColorBrush(Color.Parse("#4C78A0")), 0.45);
-        context.DrawEllipse(null, gridPen, center, radius * 0.66, radius);
-        context.DrawEllipse(null, gridPen, center, radius * 0.32, radius);
-        context.DrawEllipse(null, gridPen, center, radius, radius * 0.48);
-        context.DrawEllipse(null, gridPen, center, radius, radius * 0.78);
+        for (var longitude = -180; longitude <= 180; longitude += 30)
+            DrawGeoLine(context, center, radius, gridPen, longitude, true);
+        for (var latitude = -60; latitude <= 60; latitude += 30)
+            DrawGeoLine(context, center, radius, gridPen, latitude, false);
+    }
+
+    private void DrawGeoLine(DrawingContext context, Point center, double radius, Pen pen, double coordinate, bool longitudeLine)
+    {
+        var visiblePoints = new List<Point>();
+        for (var step = -180; step <= 180; step += 3)
+        {
+            var longitude = longitudeLine ? coordinate : step;
+            var latitude = longitudeLine ? step / 2 : coordinate;
+            var point = Project(longitude, latitude, center, radius);
+            if (point is null)
+            {
+                DrawLineSegment(context, visiblePoints, pen);
+                visiblePoints.Clear();
+            }
+            else
+            {
+                visiblePoints.Add(point.Value);
+            }
+        }
+        DrawLineSegment(context, visiblePoints, pen);
+    }
+
+    private static void DrawLineSegment(DrawingContext context, List<Point> points, Pen pen)
+    {
+        if (points.Count < 2) return;
+        var geometry = new StreamGeometry();
+        using (var builder = geometry.Open())
+        {
+            builder.BeginFigure(points[0], false);
+            foreach (var point in points.Skip(1)) builder.LineTo(point);
+            builder.EndFigure(false);
+        }
+        context.DrawGeometry(null, pen, geometry);
     }
 
     private bool ShouldShowLabel(CountryShape country)

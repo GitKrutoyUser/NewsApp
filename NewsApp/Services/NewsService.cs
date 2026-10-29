@@ -43,6 +43,9 @@ public sealed class NewsService
 
         var articles = articlesFromApi
             .Where(x => string.Equals(x.Language, "ru", StringComparison.OrdinalIgnoreCase))
+            .Where(x => !string.IsNullOrWhiteSpace(x.Url))
+            .GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase)
+            .Select(x => x.First())
             .Select(ToArticle)
             .Where(x => x is not null)
             .Cast<NewsArticle>()
@@ -81,16 +84,30 @@ public sealed class NewsService
 
     private async Task<List<NewsApiItem>> FetchCountryAsync(string countryCode, CancellationToken cancellationToken)
     {
-        try
+        for (var attempt = 0; attempt < 3; attempt++)
         {
-            using var response = await _httpClient.GetAsync($"{ApiUrl}&country={countryCode}&size=12", cancellationToken);
-            response.EnsureSuccessStatusCode();
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
-            return result?.Results ?? new List<NewsApiItem>();
+            try
+            {
+                using var response = await _httpClient.GetAsync($"{ApiUrl}&country={countryCode}&size=12", cancellationToken);
+                var temporaryFailure = response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500;
+                if (temporaryFailure && attempt < 2)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(500 * (attempt + 1)), cancellationToken);
+                    continue;
+                }
+                if (!response.IsSuccessStatusCode) return new List<NewsApiItem>();
+                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
+                return result?.Results ?? new List<NewsApiItem>();
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { return new List<NewsApiItem>(); }
+            catch (HttpRequestException) when (attempt < 2)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(500 * (attempt + 1)), cancellationToken);
+            }
+            catch (HttpRequestException) { return new List<NewsApiItem>(); }
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { return new List<NewsApiItem>(); }
-        catch (HttpRequestException) { return new List<NewsApiItem>(); }
+        return new List<NewsApiItem>();
     }
 
     private static NewsArticle? ToArticle(NewsApiItem item)

@@ -12,6 +12,7 @@ namespace NewsApp.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     private static readonly TimeSpan MinimumApiInterval = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan MinimumManualInterval = TimeSpan.FromMinutes(5);
     public event EventHandler<IReadOnlySet<string>>? NewCountriesChanged;
     private readonly NewsRepository _repository;
     private readonly NewsService _service;
@@ -90,18 +91,26 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void SelectCountry(Country country) => SelectedCountry = country;
 
     [RelayCommand]
-    private async Task RefreshAsync()
+    private Task RefreshAsync() => RefreshInternalAsync(true);
+
+    private async Task RefreshInternalAsync(bool manual)
     {
         if (!await _refreshGate.WaitAsync(0)) return;
         try
         {
             var hasAnyNews = await Task.Run(() => _repository.HasAnyNews(), _lifetime.Token);
             var lastSync = await Task.Run(() => _repository.GetLastApiSync(), _lifetime.Token);
-            if (hasAnyNews && lastSync is not null && DateTimeOffset.UtcNow - lastSync.Value < MinimumApiInterval)
+            if (hasAnyNews && lastSync is not null)
             {
+                var minimumInterval = manual ? MinimumManualInterval : MinimumApiInterval;
+                if (DateTimeOffset.UtcNow - lastSync.Value < minimumInterval)
+                {
                 var next = lastSync.Value.Add(MinimumApiInterval).ToLocalTime();
-                await SetUiAsync(() => StatusText = $" следующее обновление в {next:HH:mm}");
-                return;
+                    await SetUiAsync(() => StatusText = manual
+                        ? $"Ручное обновление доступно после {lastSync.Value.Add(MinimumManualInterval).ToLocalTime():HH:mm}"
+                        : $"Следующее автоматическое обновление после {next:HH:mm}");
+                    return;
+                }
             }
             await SetUiAsync(() => { IsRefreshing = true; StatusText = "Новости обновляются"; });
             var news = await _service.FetchNewsAsync(_lifetime.Token);
@@ -149,7 +158,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private async void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
     {
-        try { await RefreshAsync(); }
+        try { await RefreshInternalAsync(false); }
         catch (Exception exception) { Debug.WriteLine($"Timer refresh failed: {exception}"); }
     }
 
@@ -158,7 +167,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         try
         {
             await LoadCachedNewsAsync(SelectedCountry.Code);
-            await RefreshAsync();
+            await RefreshInternalAsync(false);
         }
         catch (Exception exception) { Debug.WriteLine($"Initialization failed: {exception}"); }
     }

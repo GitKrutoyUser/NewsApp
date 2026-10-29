@@ -239,7 +239,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 if (!IsRefreshing && items.Count == 0)
                     StatusText = "пока что нет новостей для этой страны";
             });
-            await LoadImagesAsync(items);
+            _ = LoadImagesAsync(items);
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception)
@@ -251,16 +251,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private async Task LoadImagesAsync(IEnumerable<NewsArticle> items)
     {
-        await Parallel.ForEachAsync(items.Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl)), new ParallelOptions
+        try
         {
-            MaxDegreeOfParallelism = 6,
-            CancellationToken = _lifetime.Token
-        }, async (article, token) =>
-        {
-            var bitmap = await _service.DownloadImageAsync(article.ImageUrl, token);
-            if (bitmap is not null)
-                await SetUiAsync(() => article.ImageBitmap = bitmap);
-        });
+            await Parallel.ForEachAsync(items.Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl)), new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 8,
+                CancellationToken = _lifetime.Token
+            }, async (article, token) =>
+            {
+                var bitmap = await _service.DownloadImageAsync(article.ImageUrl, token);
+                if (bitmap is not null)
+                    await SetUiAsync(() => article.ImageBitmap = bitmap);
+            });
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception) { Debug.WriteLine($"Image loading failed: {exception}"); }
     }
 
     private static Task SetUiAsync(Action action) => Dispatcher.UIThread.InvokeAsync(action).GetTask();

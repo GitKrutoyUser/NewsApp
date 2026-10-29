@@ -49,7 +49,8 @@ public partial class MainWindow : Window
         {
             Data = Geometry.Parse(Globe.IsAutoRotating ? "M 6,6 H 18 V 18 H 6 Z" : "M 7,4 L 7,20 L 20,12 Z"),
             Width = 18,
-            Height = 18
+            Height = 18,
+            Foreground = new SolidColorBrush(Color.Parse("#F6FAFF"))
         };
     }
 

@@ -127,7 +127,7 @@ public sealed class GlobeControl : Control
         foreach (var country in _countries.OrderByDescending(x => x.SizeScore))
         {
             var isSelected = country.Code.Equals(SelectedCountryCode, StringComparison.OrdinalIgnoreCase);
-            var fill = isSelected ? new SolidColorBrush(Color.Parse("#F5B642")) : CountryColor(country.Code);
+            var fill = isSelected ? new SolidColorBrush(Color.Parse("#F5B642")) : CountryColor(country);
             var pen = new Pen(new SolidColorBrush(isSelected ? Colors.White : Color.Parse("#B8C9AE")), isSelected ? 1.8 : 0.6);
             foreach (var polygon in country.Polygons)
                 DrawPolygon(context, polygon, center, radius, fill, pen);
@@ -150,12 +150,20 @@ public sealed class GlobeControl : Control
         context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.Parse("#A7C4B2")), 1.1), center, radius, radius);
     }
 
-    private static IBrush CountryColor(string code)
+    private static IBrush CountryColor(CountryShape country)
     {
-        var palette = new[] { "#71845A", "#8E9661", "#A28B61", "#657A55", "#B09A6A", "#58745B", "#9A8359", "#7A8B68" };
-        var hash = 17;
-        foreach (var character in code) hash = unchecked(hash * 31 + character);
-        return new SolidColorBrush(Color.Parse(palette[Math.Abs(hash) % palette.Length]));
+        var code = country.Code.ToUpperInvariant();
+        if (code is "AQ" or "ATA" or "GL" or "GRL")
+            return new SolidColorBrush(Color.Parse("#D9E4E2"));
+
+        var latitude = country.LabelPoint.Y;
+        if (latitude > 58 || latitude < -48)
+            return new SolidColorBrush(Color.Parse("#55735F"));
+        if (code is "SA" or "AE" or "EG" or "LY" or "DZ" or "MA" or "NA" or "BW" or "MN" or "AU")
+            return new SolidColorBrush(Color.Parse("#A5966C"));
+        if (latitude is > 20 and < 42)
+            return new SolidColorBrush(Color.Parse("#789064"));
+        return new SolidColorBrush(Color.Parse("#638160"));
     }
 
     private void DrawGlobeGrid(DrawingContext context, Point center, double radius)

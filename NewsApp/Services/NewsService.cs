@@ -9,9 +9,66 @@ namespace NewsApp.Services;
 
 public sealed class NewsService
 {
-    private const string ApiUrl = "https://freenewsapi.ai/v1/search?lang=ru";
-    private static readonly string[] WorldCountryCodes = { "US", "RU", "DE", "FR", "GB", "CN", "JP", "IN", "BR", "CA", "AU", "IT", "ES", "TR", "KR", "MX", "PL", "NL", "SE", "CH", "IL", "UA", "ZA" };
+    private const string ApiUrl = "https://freenewsapi.ai/v1/search";
+    private static readonly IReadOnlyList<FeedGroup> FeedGroups = BuildFeedGroups();
     private readonly HttpClient _httpClient;
+
+    private sealed record FeedGroup(string Language, string Countries);
+
+    private static IReadOnlyList<FeedGroup> BuildFeedGroups()
+    {
+        const string allCodes = "AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KP KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PS PT PW PY QA RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VC VE VN VU WS YE ZA ZM ZW";
+        var byLanguage = allCodes.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(code => (Code: code, Language: PrimaryLanguage(code)))
+            .GroupBy(x => x.Language, StringComparer.OrdinalIgnoreCase);
+
+        return byLanguage
+            .SelectMany(group => group.Chunk(40).Select(chunk => new FeedGroup(
+                group.Key,
+                string.Join(',', chunk.Select(x => x.Code)))))
+            .ToList();
+    }
+
+    private static string PrimaryLanguage(string code) => code switch
+    {
+        "ES" or "MX" or "AR" or "CO" or "CL" or "PE" or "VE" or "EC" or "BO" or "UY" or "PY" or "CR" or "PA" or "DO" or "GT" or "HN" or "SV" or "NI" or "CU" => "es",
+        "FR" or "BE" or "LU" or "MC" or "CI" or "SN" or "CM" or "MG" or "ML" or "BF" or "NE" or "TG" or "BJ" or "CD" or "CG" or "GA" or "RW" or "HT" => "fr",
+        "DE" or "AT" or "LI" => "de",
+        "PT" or "BR" or "AO" or "MZ" => "pt",
+        "IT" or "SM" or "VA" => "it",
+        "RU" or "BY" or "KZ" or "KG" => "ru",
+        "UA" => "uk",
+        "PL" => "pl",
+        "TR" => "tr",
+        "IL" => "he",
+        "JP" => "ja",
+        "CN" or "TW" or "HK" => "zh",
+        "KR" => "ko",
+        "NL" => "nl",
+        "SE" => "sv",
+        "NO" => "no",
+        "DK" => "da",
+        "FI" => "fi",
+        "CZ" => "cs",
+        "GR" or "CY" => "el",
+        "HU" => "hu",
+        "RO" or "MD" => "ro",
+        "BG" => "bg",
+        "RS" or "BA" or "ME" => "sr",
+        "HR" => "hr",
+        "SK" => "sk",
+        "SI" => "sl",
+        "ID" => "id",
+        "MY" => "ms",
+        "TH" => "th",
+        "VN" => "vi",
+        "IR" => "fa",
+        "PK" => "ur",
+        "BD" => "bn",
+        "LK" => "si",
+        "SA" or "AE" or "EG" or "IQ" or "JO" or "MA" or "DZ" or "TN" or "LB" or "SY" or "QA" or "KW" or "BH" or "OM" or "YE" => "ar",
+        _ => "en"
+    };
 
     static NewsService() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
@@ -29,20 +86,19 @@ public sealed class NewsService
         var articlesFromApi = new List<NewsApiItem>();
         try
         {
-            await Parallel.ForEachAsync(WorldCountryCodes, new ParallelOptions
+            await Parallel.ForEachAsync(FeedGroups, new ParallelOptions
             {
                 MaxDegreeOfParallelism = 4,
                 CancellationToken = requestToken
             }, async (countryCode, token) =>
             {
-                var items = await FetchCountryAsync(countryCode, token);
+                var items = await FetchGroupAsync(countryCode, token);
                 lock (articlesFromApi) articlesFromApi.AddRange(items);
             });
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
 
         var articles = articlesFromApi
-            .Where(x => string.Equals(x.Language, "ru", StringComparison.OrdinalIgnoreCase))
             .Where(x => !string.IsNullOrWhiteSpace(x.Url))
             .GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase)
             .Select(x => x.First())
@@ -82,13 +138,13 @@ public sealed class NewsService
         catch (ArgumentException) { return null; }
     }
 
-    private async Task<List<NewsApiItem>> FetchCountryAsync(string countryCode, CancellationToken cancellationToken)
+    private async Task<List<NewsApiItem>> FetchGroupAsync(FeedGroup group, CancellationToken cancellationToken)
     {
         for (var attempt = 0; attempt < 3; attempt++)
         {
             try
             {
-                using var response = await _httpClient.GetAsync($"{ApiUrl}&country={countryCode}&size=12", cancellationToken);
+                using var response = await _httpClient.GetAsync($"{ApiUrl}?lang={group.Language}&country={group.Countries}&size=50", cancellationToken);
                 var temporaryFailure = response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500;
                 if (temporaryFailure && attempt < 2)
                 {

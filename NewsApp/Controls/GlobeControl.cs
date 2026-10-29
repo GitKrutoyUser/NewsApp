@@ -121,14 +121,14 @@ public sealed class GlobeControl : Control
     {
         var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
         var radius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * _zoom);
-        context.DrawEllipse(new SolidColorBrush(Color.Parse("#13253C")), new Pen(new SolidColorBrush(Color.Parse("#3B79AF")), 2), center, radius, radius);
+        context.DrawEllipse(new SolidColorBrush(Color.Parse("#142B3A")), new Pen(new SolidColorBrush(Color.Parse("#78A7A9")), 2), center, radius, radius);
 
         var occupiedLabels = new List<Rect>();
         foreach (var country in _countries.OrderByDescending(x => x.SizeScore))
         {
             var isSelected = country.Code.Equals(SelectedCountryCode, StringComparison.OrdinalIgnoreCase);
             var fill = isSelected ? new SolidColorBrush(Color.Parse("#F5B642")) : CountryColor(country.Code);
-            var pen = new Pen(new SolidColorBrush(isSelected ? Colors.White : Color.Parse("#B9D5E8")), isSelected ? 1.6 : 0.75);
+            var pen = new Pen(new SolidColorBrush(isSelected ? Colors.White : Color.Parse("#B8C9AE")), isSelected ? 1.8 : 0.6);
             foreach (var polygon in country.Polygons)
                 DrawPolygon(context, polygon, center, radius, fill, pen);
             var label = Project(country.LabelPoint.X, country.LabelPoint.Y, center, radius);
@@ -147,12 +147,12 @@ public sealed class GlobeControl : Control
         }
 
         DrawGlobeGrid(context, center, radius);
-        context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.Parse("#6FA8D2")), 1), center, radius, radius);
+        context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.Parse("#A7C4B2")), 1.1), center, radius, radius);
     }
 
     private static IBrush CountryColor(string code)
     {
-        var palette = new[] { "#3D7EA6", "#4F8F6A", "#A56B46", "#7A65A8", "#B05D72", "#3F8E89", "#8A7A42", "#A65B8D" };
+        var palette = new[] { "#71845A", "#8E9661", "#A28B61", "#657A55", "#B09A6A", "#58745B", "#9A8359", "#7A8B68" };
         var hash = 17;
         foreach (var character in code) hash = unchecked(hash * 31 + character);
         return new SolidColorBrush(Color.Parse(palette[Math.Abs(hash) % palette.Length]));
@@ -160,7 +160,7 @@ public sealed class GlobeControl : Control
 
     private void DrawGlobeGrid(DrawingContext context, Point center, double radius)
     {
-        var gridPen = new Pen(new SolidColorBrush(Color.Parse("#4C78A0")), 0.45);
+        var gridPen = new Pen(new SolidColorBrush(Color.Parse("#6F9691")), 0.32);
         for (var longitude = -180; longitude <= 180; longitude += 30)
             DrawGeoLine(context, center, radius, gridPen, longitude, true);
         for (var latitude = -60; latitude <= 60; latitude += 30)

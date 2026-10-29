@@ -54,6 +54,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty] private Country _selectedCountry;
     [ObservableProperty] private bool _isRefreshing;
+    [ObservableProperty] private bool _isLoading = true;
     [ObservableProperty] private string _statusText = "Проверяем локальный кэш…";
     [ObservableProperty] private bool _isReadingArticle;
     [ObservableProperty] private NewsArticle? _openedArticle;
@@ -216,9 +217,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         try
         {
             await LoadCachedNewsAsync(SelectedCountry.Code);
+            await SetUiAsync(() => IsLoading = false);
             await RefreshInternalAsync(false);
         }
-        catch (Exception exception) { Debug.WriteLine($"Initialization failed: {exception}"); }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"Initialization failed: {exception}");
+            await SetUiAsync(() => IsLoading = false);
+        }
     }
 
     private async Task LoadCachedNewsAsync(string countryCode)

@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 using NewsApp.ViewModels;
 
 namespace NewsApp.Views;
@@ -11,10 +12,12 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        LoadingGlobe.ToggleAutoRotation();
         DataContextChanged += OnDataContextChanged;
         Closed += (_, _) =>
         {
             Globe.StopAutoRotation();
+            LoadingGlobe.StopAutoRotation();
             (DataContext as IDisposable)?.Dispose();
         };
     }
@@ -42,7 +45,12 @@ public partial class MainWindow : Window
     private void OnAutoRotationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         Globe.ToggleAutoRotation();
-        AutoRotationButton.Content = Globe.IsAutoRotating ? "■" : "▶";
+        AutoRotationButton.Content = new PathIcon
+        {
+            Data = Geometry.Parse(Globe.IsAutoRotating ? "M 6,6 H 18 V 18 H 6 Z" : "M 7,4 L 7,20 L 20,12 Z"),
+            Width = 18,
+            Height = 18
+        };
     }
 
     private void OnArticleScrollToTop(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

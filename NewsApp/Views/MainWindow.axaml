@@ -18,7 +18,7 @@
     <Style Selector="TextBlock.toolbarIcon"><Setter Property="Foreground" Value="#F6FAFF"/><Setter Property="FontSize" Value="21"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
   </Window.Styles>
   <Grid>
-  <Grid ColumnDefinitions="390,*" ColumnSpacing="26">
+  <Grid ColumnDefinitions="390,Auto,*" ColumnSpacing="12">
     <Border Grid.Column="0" Background="#111821" Padding="18" CornerRadius="0,18,18,0">
       <Grid RowDefinitions="Auto,*,Auto,Auto,Auto">
         <StackPanel Spacing="6">
@@ -31,7 +31,10 @@
         <TextBlock Grid.Row="4" Text="Перетаскивание — вручную, колесо — масштаб" Classes="muted" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
       </Grid>
     </Border>
-    <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="10,30,38,20">
+    <Button x:Name="NewsPaneToggleButton" Grid.Column="1" Command="{Binding ToggleNewsPaneCommand}" ToolTip.Tip="Свернуть или показать новости" VerticalAlignment="Center" Padding="7,14" Background="#172638" Foreground="#D9E8F5" CornerRadius="8">
+      <TextBlock Text="&lt;" FontSize="22" FontWeight="SemiBold"/>
+    </Button>
+    <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*" Margin="10,30,38,20" IsVisible="{Binding IsNewsPaneVisible}">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="5">
@@ -40,8 +43,12 @@
           </StackPanel>
           <TextBlock Text="Свежие события из локального кэша WorldPulse" Classes="muted" Margin="0,6,0,0"/>
         </StackPanel>
-        <Button Grid.Column="1" Padding="15,9" ToolTip.Tip="Выбрать способ обновления" Background="#2477D4" Foreground="White" CornerRadius="8" IsEnabled="{Binding !IsRefreshing}">
-          <TextBlock Classes="toolbarIcon" Text="⟳"/>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+        <Button x:Name="RefreshButton" Command="{Binding RefreshCommand}" Padding="15,9" ToolTip.Tip="Обновить через API" Background="#2477D4" Foreground="White" CornerRadius="8,0,0,8" IsEnabled="{Binding !IsRefreshing}">
+          <TextBlock x:Name="RefreshIcon" Classes="toolbarIcon" Text="⟳"/>
+        </Button>
+        <Button Padding="9,9" ToolTip.Tip="Выбрать способ обновления" Background="#1C5FA6" Foreground="White" CornerRadius="0,8,8,0" IsEnabled="{Binding !IsRefreshing}">
+          <TextBlock Text="⌄" FontSize="17" FontWeight="Bold"/>
           <Button.Flyout>
             <MenuFlyout>
               <MenuItem Header="Показать из базы" Command="{Binding LoadCacheCommand}"/>
@@ -49,6 +56,7 @@
             </MenuFlyout>
           </Button.Flyout>
         </Button>
+        </StackPanel>
       </Grid>
       <TextBlock Grid.Row="1" Text="{Binding StatusText}" Classes="muted" Margin="0,22,0,16"/>
       <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" IsVisible="{Binding !IsReadingArticle}">

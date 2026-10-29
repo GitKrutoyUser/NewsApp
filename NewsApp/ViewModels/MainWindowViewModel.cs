@@ -55,6 +55,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private Country _selectedCountry;
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isLoading = true;
+    [ObservableProperty] private bool _isNewsPaneVisible = true;
     [ObservableProperty] private string _statusText = "Проверяем локальный кэш…";
     [ObservableProperty] private bool _isReadingArticle;
     [ObservableProperty] private NewsArticle? _openedArticle;
@@ -98,6 +99,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     [RelayCommand]
     private Task RefreshAsync() => RefreshInternalAsync(true);
+
+    [RelayCommand]
+    private void ToggleNewsPane() => IsNewsPaneVisible = !IsNewsPaneVisible;
 
     [RelayCommand]
     private async Task LoadCacheAsync()

@@ -253,12 +253,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            await Parallel.ForEachAsync(items.Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl)), new ParallelOptions
+            await Parallel.ForEachAsync(items, new ParallelOptions
             {
-                MaxDegreeOfParallelism = 8,
+                MaxDegreeOfParallelism = 6,
                 CancellationToken = _lifetime.Token
             }, async (article, token) =>
             {
+                if (string.IsNullOrWhiteSpace(article.ImageUrl))
+                {
+                    article.ImageUrl = await _service.FindArticleImageAsync(article.Url, token);
+                    if (!string.IsNullOrWhiteSpace(article.ImageUrl))
+                        await Task.Run(() => _repository.UpdateImageUrl(article.Url, article.ImageUrl), token);
+                }
                 var bitmap = await _service.DownloadImageAsync(article.ImageUrl, token);
                 if (bitmap is not null)
                     await SetUiAsync(() => article.ImageBitmap = bitmap);

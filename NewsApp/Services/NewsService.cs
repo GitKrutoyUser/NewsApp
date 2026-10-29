@@ -68,6 +68,13 @@ public sealed class NewsService
         catch (ArgumentException) { return null; }
     }
 
+    public async Task<string?> FindArticleImageAsync(string articleUrl, CancellationToken cancellationToken = default)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        return await TryGetOgImageAsync(articleUrl, timeout.Token);
+    }
+
     private async Task<List<NewsApiItem>> FetchCountryAsync(string countryCode, CancellationToken cancellationToken)
     {
         for (var attempt = 0; attempt < 3; attempt++)

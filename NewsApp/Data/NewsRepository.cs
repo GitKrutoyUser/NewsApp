@@ -118,6 +118,17 @@ public sealed class NewsRepository
         return urls;
     }
 
+    public void UpdateImageUrl(string articleUrl, string imageUrl)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE news SET image_url = $image WHERE url = $url AND (image_url IS NULL OR image_url = '');";
+        command.Parameters.AddWithValue("$url", articleUrl);
+        command.Parameters.AddWithValue("$image", imageUrl);
+        command.ExecuteNonQuery();
+    }
+
     public bool HasAnyNews()
     {
         using var connection = new SqliteConnection(_connectionString);

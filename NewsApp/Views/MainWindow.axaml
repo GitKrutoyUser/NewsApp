@@ -73,21 +73,42 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </ScrollViewer>
-      <Grid Grid.Row="2" IsVisible="{Binding IsReadingArticle}" RowDefinitions="Auto,Auto,*" RowSpacing="14">
-        <Button Content="← Назад к новостям" Command="{Binding CloseArticleCommand}" HorizontalAlignment="Left" Padding="14,8"/>
-        <StackPanel Grid.Row="1" Spacing="8">
-          <TextBlock Text="{Binding OpenedArticle.CountryName}" Foreground="#72B7FF" FontSize="12" FontWeight="Bold"/>
-          <TextBlock Text="{Binding OpenedArticle.Title}" FontSize="28" FontWeight="Bold" TextWrapping="Wrap"/>
-          <TextBlock Text="{Binding OpenedArticle.PublishedAtText}" Classes="muted"/>
-        </StackPanel>
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-          <StackPanel Spacing="14" MaxWidth="850">
-            <Image Source="{Binding OpenedArticle.ImageBitmap}" Height="250" Stretch="UniformToFill"/>
-            <TextBlock Text="{Binding IsArticleLoading, StringFormat='Загрузка полного текста: {0}'}" Classes="muted" IsVisible="{Binding IsArticleLoading}"/>
-            <TextBlock Text="{Binding OpenedArticleText}" FontSize="17" LineHeight="27" TextWrapping="Wrap"/>
+      <ScrollViewer Grid.Row="2" IsVisible="{Binding IsReadingArticle}" VerticalScrollBarVisibility="Auto">
+        <Border Background="#111A25" CornerRadius="16" Padding="28" HorizontalAlignment="Center" MaxWidth="900">
+          <StackPanel Spacing="18">
+            <Button Content="← Назад к новостям" Command="{Binding CloseArticleCommand}" HorizontalAlignment="Left" Padding="14,8"/>
+            <Border Background="#182536" CornerRadius="12" Padding="20">
+              <StackPanel Spacing="10">
+                <TextBlock Text="{Binding OpenedArticle.CountryName}" Foreground="#72B7FF" FontSize="13" FontWeight="Bold"/>
+                <TextBlock Text="{Binding OpenedArticle.Title}" FontSize="30" FontWeight="Bold" Foreground="#F7FAFD" TextWrapping="Wrap"/>
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <TextBlock Text="{Binding OpenedArticle.PublishedAtText}" Classes="muted"/>
+                  <TextBlock Text="•" Classes="muted"/>
+                  <TextBlock Text="Встроенное чтение" Classes="muted"/>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+            <Image Source="{Binding OpenedArticle.ImageBitmap}" Height="300" Stretch="UniformToFill"/>
+            <TextBlock Text="Загрузка материалов статьи…" Classes="muted" IsVisible="{Binding IsArticleLoading}"/>
+            <ItemsControl ItemsSource="{Binding OpenedArticleImages}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Background="#182536" CornerRadius="10" Padding="6" Margin="0,0,0,10">
+                    <Image Source="{Binding}" MaxHeight="360" Stretch="Uniform"/>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ItemsControl ItemsSource="{Binding OpenedArticleParagraphs}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding}" FontSize="17" LineHeight="29" Foreground="#D8E1EB" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </StackPanel>
-        </ScrollViewer>
-      </Grid>
+        </Border>
+      </ScrollViewer>
     </Grid>
   </Grid>
 </Window>

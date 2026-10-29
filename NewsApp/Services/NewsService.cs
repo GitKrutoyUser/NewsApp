@@ -134,7 +134,7 @@ public sealed class NewsService
         };
     }
 
-    public async Task<string?> DownloadArticleTextAsync(string articleUrl, CancellationToken cancellationToken = default)
+    public async Task<ArticleContent?> DownloadArticleAsync(string articleUrl, CancellationToken cancellationToken = default)
     {
         if (!Uri.TryCreate(articleUrl, UriKind.Absolute, out var uri)) return null;
         try
@@ -161,7 +161,18 @@ public sealed class NewsService
                 .Distinct(StringComparer.Ordinal)
                 .Take(80)
                 .ToList();
-            return paragraphs is { Count: > 0 } ? string.Join(Environment.NewLine + Environment.NewLine, paragraphs) : null;
+            var images = root.SelectNodes(".//img")?
+                .Select(x => x.GetAttributeValue("src", string.Empty))
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => MakeAbsoluteUrl(articleUrl, x))
+                .Where(x => x is not null)
+                .Cast<string>()
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(8)
+                .ToList() ?? new List<string>();
+            return paragraphs is { Count: > 0 }
+                ? new ArticleContent { Paragraphs = paragraphs, ImageUrls = images }
+                : null;
         }
         catch (HttpRequestException) { return null; }
         catch (TaskCanceledException) { return null; }

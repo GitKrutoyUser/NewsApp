@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -50,6 +51,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     });
 
     public ObservableCollection<NewsArticle> Articles { get; } = new();
+    public ObservableCollection<string> OpenedArticleParagraphs { get; } = new();
+    public ObservableCollection<Bitmap> OpenedArticleImages { get; } = new();
 
     [ObservableProperty] private Country _selectedCountry;
     [ObservableProperty] private bool _isRefreshing;
@@ -163,12 +166,25 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         OpenedArticle = article;
         OpenedArticleText = article.Description;
+        OpenedArticleParagraphs.Clear();
+        if (!string.IsNullOrWhiteSpace(article.Description)) OpenedArticleParagraphs.Add(article.Description);
+        OpenedArticleImages.Clear();
         IsReadingArticle = true;
         IsArticleLoading = true;
         try
         {
-            var text = await _service.DownloadArticleTextAsync(article.Url, _lifetime.Token);
-            if (!string.IsNullOrWhiteSpace(text)) OpenedArticleText = text;
+            var content = await _service.DownloadArticleAsync(article.Url, _lifetime.Token);
+            if (content is not null)
+            {
+                OpenedArticleParagraphs.Clear();
+                foreach (var paragraph in content.Paragraphs) OpenedArticleParagraphs.Add(paragraph);
+                foreach (var imageUrl in content.ImageUrls)
+                {
+                    if (string.Equals(imageUrl, article.ImageUrl, StringComparison.OrdinalIgnoreCase)) continue;
+                    var bitmap = await _service.DownloadImageAsync(imageUrl, _lifetime.Token);
+                    if (bitmap is not null) OpenedArticleImages.Add(bitmap);
+                }
+            }
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception) { Debug.WriteLine($"Read article failed: {exception}"); }
@@ -184,6 +200,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         IsReadingArticle = false;
         OpenedArticle = null;
         OpenedArticleText = string.Empty;
+        OpenedArticleParagraphs.Clear();
+        OpenedArticleImages.Clear();
     }
 
     private async void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)

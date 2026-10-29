@@ -48,3 +48,9 @@ public sealed class NewsApiItem
     [JsonPropertyName("lang")] public string? Language { get; set; }
     [JsonPropertyName("image")] public string? Image { get; set; }
 }
+
+public sealed class ArticleContent
+{
+    public List<string> Paragraphs { get; init; } = new();
+    public List<string> ImageUrls { get; init; } = new();
+}

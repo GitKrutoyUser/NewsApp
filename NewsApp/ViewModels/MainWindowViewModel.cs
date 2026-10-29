@@ -260,7 +260,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             }, async (article, token) =>
             {
                 var metadataChanged = false;
-                var bitmap = await _service.DownloadImageAsync(article.ImageUrl, token);
+                var bitmap = await _service.DownloadImageAsync(article.ImageUrl, article.Url, token);
                 if (bitmap is null)
                 {
                     var fallbackImageUrl = await _service.FindArticleImageAsync(article.Url, token);
@@ -268,7 +268,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     {
                         article.ImageUrl = fallbackImageUrl;
                         await Task.Run(() => _repository.UpdateImageUrl(article.Url, fallbackImageUrl), token);
-                        bitmap = await _service.DownloadImageAsync(fallbackImageUrl, token);
+                        bitmap = await _service.DownloadImageAsync(fallbackImageUrl, article.Url, token);
                     }
                 }
                 if (string.IsNullOrWhiteSpace(article.Description))

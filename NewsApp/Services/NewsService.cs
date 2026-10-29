@@ -54,11 +54,18 @@ public sealed class NewsService
     }
 
     public async Task<Bitmap?> DownloadImageAsync(string? imageUrl, CancellationToken cancellationToken = default)
+        => await DownloadImageAsync(imageUrl, null, cancellationToken);
+
+    public async Task<Bitmap?> DownloadImageAsync(string? imageUrl, string? referer, CancellationToken cancellationToken = default)
     {
         if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri)) return null;
         try
         {
-            using var response = await _httpClient.GetAsync(uri, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            request.Headers.Accept.ParseAdd("image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+            if (Uri.TryCreate(referer, UriKind.Absolute, out var refererUri))
+                request.Headers.Referrer = refererUri;
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode) return null;
             var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
             return bytes.Length == 0 ? null : new Bitmap(new MemoryStream(bytes));
@@ -91,7 +98,10 @@ public sealed class NewsService
 
             var document = new HtmlDocument();
             document.LoadHtml(encoding.GetString(bytes));
-            var meta = document.DocumentNode.SelectSingleNode("//meta[@name='description'] | //meta[@property='og:description']")
+            var meta = document.DocumentNode.SelectSingleNode(
+                "//meta[contains(translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'description')]" +
+                " | //meta[contains(translate(@property,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'description')]" +
+                " | //meta[@itemprop='description']")
                 ?.GetAttributeValue("content", string.Empty)?.Trim();
             if (!string.IsNullOrWhiteSpace(meta)) return HtmlEntity.DeEntitize(meta);
 
@@ -222,8 +232,21 @@ public sealed class NewsService
             var html = encoding.GetString(bytes);
             var document = new HtmlDocument();
             document.LoadHtml(html);
-            var node = document.DocumentNode.SelectSingleNode("//meta[@property='og:image'] | //meta[@name='og:image']");
-            var image = node?.GetAttributeValue("content", string.Empty);
+            var node = document.DocumentNode.SelectSingleNode(
+                "//meta[contains(translate(@property,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'og:image')]" +
+                " | //meta[contains(translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'twitter:image')]" +
+                " | //link[contains(translate(@rel,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'image_src')]");
+            var image = node?.GetAttributeValue("content", string.Empty) ?? node?.GetAttributeValue("href", string.Empty);
+            if (string.IsNullOrWhiteSpace(image))
+            {
+                var imageNode = document.DocumentNode.SelectSingleNode("//article//img | //main//img | //img");
+                image = new[]
+                {
+                    imageNode?.GetAttributeValue("src", string.Empty),
+                    imageNode?.GetAttributeValue("data-src", string.Empty),
+                    imageNode?.GetAttributeValue("data-lazy-src", string.Empty)
+                }.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+            }
             return MakeAbsoluteUrl(articleUrl, image);
         }
         catch (HttpRequestException) { return null; }

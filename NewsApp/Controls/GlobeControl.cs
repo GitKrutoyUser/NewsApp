@@ -169,14 +169,17 @@ public sealed class GlobeControl : Control
         var moonRadius = Math.Max(16, earthRadius * 0.23);
         var moonRect = new Rect(moonCenter.X - moonRadius, moonCenter.Y - moonRadius, moonRadius * 2, moonRadius * 2);
         var moonPen = new Pen(new SolidColorBrush(Color.Parse("#E4E8E8")), Math.Max(1, earthRadius * 0.009));
+        context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.FromArgb(70, 170, 190, 205)), 0.7),
+            center, orbitRadius, orbitRadius * 0.62);
         if (_moonTexture is not null)
         {
             using (context.PushClip(new RoundedRect(moonRect, moonRadius)))
             {
-                var source = new Rect(0, 0, _moonTexture.PixelSize.Width, _moonTexture.PixelSize.Height);
-                context.DrawImage(_moonTexture, source, moonRect);
+                DrawWrappedMoonTexture(context, moonRect);
+                context.DrawEllipse(new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)), null,
+                    new Point(moonCenter.X - moonRadius * 0.27, moonCenter.Y - moonRadius * 0.28), moonRadius * 0.72, moonRadius * 0.72);
                 context.DrawEllipse(new SolidColorBrush(Color.FromArgb(58, 0, 0, 0)), null,
-                    new Point(moonCenter.X + moonRadius * 0.25, moonCenter.Y), moonRadius * 0.95, moonRadius);
+                    new Point(moonCenter.X + moonRadius * 0.30, moonCenter.Y + moonRadius * 0.04), moonRadius * 0.90, moonRadius * 0.98);
             }
         }
         else
@@ -184,6 +187,29 @@ public sealed class GlobeControl : Control
             context.DrawEllipse(new SolidColorBrush(Color.Parse("#B8BEC2")), null, moonCenter, moonRadius, moonRadius);
         }
         context.DrawEllipse(null, moonPen, moonCenter, moonRadius, moonRadius);
+    }
+
+    private void DrawWrappedMoonTexture(DrawingContext context, Rect destination)
+    {
+        if (_moonTexture is null) return;
+        var textureWidth = _moonTexture.PixelSize.Width;
+        var textureHeight = _moonTexture.PixelSize.Height;
+        var sourceWidth = Math.Min(textureWidth, textureHeight);
+        var offset = ((_yaw + _moonAngle) / (Math.PI * 2) * textureWidth) % textureWidth;
+        if (offset < 0) offset += textureWidth;
+        var firstWidth = Math.Min(sourceWidth, textureWidth - offset);
+        var firstDestinationWidth = destination.Width * firstWidth / sourceWidth;
+        context.DrawImage(_moonTexture,
+            new Rect(offset, 0, firstWidth, textureHeight),
+            new Rect(destination.X, destination.Y, firstDestinationWidth, destination.Height));
+        var remaining = sourceWidth - firstWidth;
+        if (remaining > 0)
+        {
+            context.DrawImage(_moonTexture,
+                new Rect(0, 0, remaining, textureHeight),
+                new Rect(destination.X + firstDestinationWidth, destination.Y,
+                    destination.Width - firstDestinationWidth, destination.Height));
+        }
     }
 
     private static IBrush CountryColor(CountryShape country)

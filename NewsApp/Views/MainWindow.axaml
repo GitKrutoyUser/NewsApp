@@ -23,7 +23,11 @@
     <Style Selector="Button.refreshMore"><Setter Property="Background" Value="#1E639F"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="Width" Value="34"/><Setter Property="Padding" Value="0"/></Style>
   </Window.Styles>
   <Grid>
-  <Grid ColumnDefinitions="390,*" ColumnSpacing="18">
+  <Grid x:Name="MainLayout" ColumnSpacing="18">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="390"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
     <Border Grid.Column="0" Background="#111821" Padding="18" CornerRadius="0,18,18,0">
       <Grid RowDefinitions="Auto,*,Auto,Auto,Auto">
         <StackPanel Spacing="6">

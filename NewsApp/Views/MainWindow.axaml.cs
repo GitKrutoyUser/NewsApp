@@ -10,7 +10,11 @@ public partial class MainWindow : Window
 {
     private MainWindowViewModel? _viewModel;
     private readonly DispatcherTimer _refreshAnimationTimer;
+    private readonly DispatcherTimer _paneAnimationTimer;
     private double _refreshAngle;
+    private double _paneFromNews;
+    private double _paneToNews;
+    private DateTime _paneAnimationStarted;
 
     public MainWindow()
     {
@@ -24,12 +28,20 @@ public partial class MainWindow : Window
             _refreshAngle = (_refreshAngle + 12) % 360;
             ((RotateTransform)RefreshIcon.RenderTransform!).Angle = _refreshAngle;
         };
+        _paneAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _paneAnimationTimer.Tick += OnPaneAnimationTick;
+        MainLayout.SizeChanged += (_, _) =>
+        {
+            if (!_paneAnimationTimer.IsEnabled)
+                SetPaneLayout(_viewModel?.IsNewsPaneVisible != false, false);
+        };
         DataContextChanged += OnDataContextChanged;
         Closed += (_, _) =>
         {
             Globe.StopAutoRotation();
             LoadingGlobe.StopAutoRotation();
             _refreshAnimationTimer.Stop();
+            _paneAnimationTimer.Stop();
             (DataContext as IDisposable)?.Dispose();
         };
     }
@@ -49,6 +61,7 @@ public partial class MainWindow : Window
             _viewModel.NewCountriesChanged += OnNewCountriesChanged;
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             UpdateNewsPaneButton();
+            SetPaneLayout(_viewModel.IsNewsPaneVisible, false);
         }
     }
 
@@ -65,7 +78,10 @@ public partial class MainWindow : Window
             }
         }
         else if (e.PropertyName == nameof(MainWindowViewModel.IsNewsPaneVisible))
+        {
             UpdateNewsPaneButton();
+            AnimateNewsPane(_viewModel?.IsNewsPaneVisible != false);
+        }
     }
 
     private void UpdateNewsPaneButton()
@@ -76,6 +92,56 @@ public partial class MainWindow : Window
             FontSize = 22,
             FontWeight = FontWeight.SemiBold
         };
+    }
+
+    private void AnimateNewsPane(bool visible)
+    {
+        if (MainLayout.Bounds.Width <= 0) return;
+        var available = Math.Max(0, MainLayout.Bounds.Width - MainLayout.ColumnSpacing);
+        _paneFromNews = MainLayout.ColumnDefinitions[1].ActualWidth;
+        if (_paneFromNews <= 1) _paneFromNews = visible ? 54 : Math.Max(54, available - 390);
+        _paneToNews = visible ? Math.Max(54, available - 390) : 54;
+        _paneAnimationStarted = DateTime.UtcNow;
+        _paneAnimationTimer.Start();
+    }
+
+    private void OnPaneAnimationTick(object? sender, EventArgs e)
+    {
+        var progress = Math.Clamp((DateTime.UtcNow - _paneAnimationStarted).TotalMilliseconds / 260d, 0, 1);
+        var eased = progress * progress * (3 - 2 * progress);
+        var newsWidth = _paneFromNews + (_paneToNews - _paneFromNews) * eased;
+        SetPaneWidths(newsWidth);
+        if (progress >= 1)
+        {
+            _paneAnimationTimer.Stop();
+            SetPaneLayout(_viewModel?.IsNewsPaneVisible != false, false);
+        }
+    }
+
+    private void SetPaneWidths(double newsWidth)
+    {
+        var available = Math.Max(0, MainLayout.Bounds.Width - MainLayout.ColumnSpacing);
+        MainLayout.ColumnDefinitions[1].Width = new GridLength(Math.Clamp(newsWidth, 54, available));
+        MainLayout.ColumnDefinitions[0].Width = new GridLength(Math.Max(0, available - newsWidth));
+    }
+
+    private void SetPaneLayout(bool visible, bool animate)
+    {
+        if (animate)
+        {
+            AnimateNewsPane(visible);
+            return;
+        }
+        if (visible)
+        {
+            MainLayout.ColumnDefinitions[0].Width = new GridLength(390);
+            MainLayout.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
+        }
+        else
+        {
+            MainLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+            MainLayout.ColumnDefinitions[1].Width = new GridLength(54);
+        }
     }
 
     private void OnCountrySelected(object? sender, string countryCode) =>

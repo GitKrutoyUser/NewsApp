@@ -23,6 +23,7 @@ public sealed class GlobeControl : Control
 
     private readonly List<CountryShape> _countries = new();
     private readonly Bitmap? _moonTexture;
+    private readonly (double X, double Y, double Size, byte Alpha)[] _stars;
     private Point _lastPointer;
     private bool _dragging;
     private bool _moved;
@@ -51,6 +52,7 @@ public sealed class GlobeControl : Control
     public GlobeControl()
     {
         Focusable = true;
+        _stars = CreateStars();
         LoadGeoJson();
         try
         {
@@ -141,6 +143,7 @@ public sealed class GlobeControl : Control
 
     public override void Render(DrawingContext context)
     {
+        DrawStars(context);
         GetSceneGeometry(out var center, out var radius, out var moonCenter, out var moonRadius, out var moonOrbit);
         context.DrawEllipse(new SolidColorBrush(Color.Parse("#142B3A")), new Pen(new SolidColorBrush(Color.Parse("#78A7A9")), 2), center, radius, radius);
 
@@ -170,6 +173,26 @@ public sealed class GlobeControl : Control
         DrawGlobeGrid(context, center, radius);
         context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.Parse("#A7C4B2")), 1.1), center, radius, radius);
         DrawMoon(context, center, radius, moonCenter, moonRadius, moonOrbit);
+    }
+
+    private static (double X, double Y, double Size, byte Alpha)[] CreateStars()
+    {
+        var random = new Random(27101986);
+        return Enumerable.Range(0, 150)
+            .Select(_ => (random.NextDouble(), random.NextDouble(),
+                0.55 + random.NextDouble() * 1.7,
+                (byte)(75 + random.Next(0, 150))))
+            .ToArray();
+    }
+
+    private void DrawStars(DrawingContext context)
+    {
+        foreach (var star in _stars)
+        {
+            var point = new Point(star.X * Bounds.Width, star.Y * Bounds.Height);
+            var color = Color.FromArgb(star.Alpha, 210, 229, 244);
+            context.DrawEllipse(new SolidColorBrush(color), null, point, star.Size, star.Size);
+        }
     }
 
     private void GetSceneGeometry(out Point earthCenter, out double earthRadius, out Point moonCenter, out double moonRadius, out double moonOrbit)

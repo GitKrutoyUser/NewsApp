@@ -70,9 +70,23 @@ public sealed class NewsService
         if (!response.IsSuccessStatusCode) return new List<NewsApiItem>();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
-        var items = result?.Results ?? new List<NewsApiItem>();
+        var items = (result?.Results ?? new List<NewsApiItem>())
+            .Where(IsMoonArticle)
+            .ToList();
         foreach (var item in items) item.Country = "MOON";
         return items;
+    }
+
+    private static bool IsMoonArticle(NewsApiItem item)
+    {
+        var text = $"{item.Title} {item.Description}".ToLowerInvariant();
+        var isMoon = text.Contains("лун") || text.Contains("луна") ||
+                     text.Contains("артемис") || text.Contains("apollo") || text.Contains("селена");
+        var isAnotherPlanet = text.Contains("марс") || text.Contains("марсиан") ||
+                              text.Contains("юпитер") || text.Contains("сатурн") ||
+                              text.Contains("венер") || text.Contains("меркур") ||
+                              text.Contains("нептун") || text.Contains("уран");
+        return isMoon && !isAnotherPlanet;
     }
 
     private async Task<List<NewsApiItem>> FetchLunarNewsAsync(CancellationToken cancellationToken)

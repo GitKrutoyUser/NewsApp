@@ -15,7 +15,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private static readonly TimeSpan MinimumManualInterval = TimeSpan.FromMinutes(5);
     public event EventHandler<IReadOnlySet<string>>? NewCountriesChanged;
     private readonly NewsRepository _repository;
-    private readonly NewsRepository _spaceRepository;
     private readonly NewsService _service;
     private readonly System.Timers.Timer _refreshTimer;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
@@ -48,16 +47,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         new Country("CH", "Швейцария", "🇨🇭"),
         new Country("IL", "Израиль", "🇮🇱"), 
         new Country("UA", "Украина", "🇺🇦"), 
-        new Country("ZA", "ЮАР", "🇿🇦"),
-        new Country("SUN", "Солнце", "☀"),
-        new Country("MERCURY", "Меркурий", "◉"),
-        new Country("VENUS", "Венера", "◉"),
-        new Country("EARTH", "Земля", "🌍"),
-        new Country("MARS", "Марс", "●"),
-        new Country("JUPITER", "Юпитер", "◉"),
-        new Country("SATURN", "Сатурн", "◉"),
-        new Country("URANUS", "Уран", "◉"),
-        new Country("NEPTUNE", "Нептун", "◉")
+        new Country("ZA", "ЮАР", "🇿🇦")
     });
 
     public ObservableCollection<NewsArticle> Articles { get; } = new();
@@ -67,22 +57,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isLoading = true;
     [ObservableProperty] private bool _isNewsPaneVisible = true;
-    [ObservableProperty] private bool _isSolarSystemVisible;
     [ObservableProperty] private string _statusText = "Проверяем локальный кэш…";
     [ObservableProperty] private bool _isReadingArticle;
     [ObservableProperty] private NewsArticle? _openedArticle;
     [ObservableProperty] private string _openedArticleText = string.Empty;
     [ObservableProperty] private bool _isArticleLoading;
 
-    public MainWindowViewModel() : this(new NewsRepository(), new NewsRepository(GetSpaceDatabasePath()), new NewsService()) { }
+    public MainWindowViewModel() : this(new NewsRepository(), new NewsService()) { }
 
     public MainWindowViewModel(NewsRepository repository, NewsService service)
-        : this(repository, new NewsRepository(GetSpaceDatabasePath()), service) { }
-
-    public MainWindowViewModel(NewsRepository repository, NewsRepository spaceRepository, NewsService service)
     {
         _repository = repository;
-        _spaceRepository = spaceRepository;
         _service = service;
         _selectedCountry = Countries[0];
         _refreshTimer = new System.Timers.Timer(TimeSpan.FromMinutes(30).TotalMilliseconds) { AutoReset = true };
@@ -91,16 +76,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _ = InitializeAsync();
     }
 
-    partial void OnSelectedCountryChanged(Country value)
-    {
-        _ = LoadCachedNewsAsync(value.Code);
-        if (IsCelestialCode(value.Code)) _ = EnsurePlanetNewsAsync(value.Code);
-    }
-
-    private static string GetSpaceDatabasePath() => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WorldPulse", "space_news.db");
-
-    private static bool IsCelestialCode(string code) => code is "SUN" or "MERCURY" or "VENUS" or "EARTH" or "MOON" or "MARS" or "JUPITER" or "SATURN" or "URANUS" or "NEPTUNE";
+    partial void OnSelectedCountryChanged(Country value) => _ = LoadCachedNewsAsync(value.Code);
 
     public void SelectCountryCode(string code)
     {
@@ -130,9 +106,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     [RelayCommand]
     private void ToggleNewsPane() => IsNewsPaneVisible = !IsNewsPaneVisible;
-
-    [RelayCommand]
-    private void ToggleSolarSystem() => IsSolarSystemVisible = !IsSolarSystemVisible;
 
     [RelayCommand]
     private async Task LoadCacheAsync()
@@ -268,8 +241,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            var repository = IsCelestialCode(countryCode) ? _spaceRepository : _repository;
-            var items = await Task.Run(() => repository.GetNewsByCountry(countryCode), _lifetime.Token);
+            var items = await Task.Run(() => _repository.GetNewsByCountry(countryCode), _lifetime.Token);
             await SetUiAsync(() =>
             {
                 Articles.Clear();
@@ -285,26 +257,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             Debug.WriteLine($"Cache read failed: {exception}");
             await SetUiAsync(() => StatusText = "Не удалось прочитать локальный кэш новостей");
         }
-    }
-
-    private async Task EnsurePlanetNewsAsync(string planetCode)
-    {
-        try
-        {
-            var cached = await Task.Run(() => _spaceRepository.GetNewsByCountry(planetCode), _lifetime.Token);
-            if (cached.Count > 0) return;
-            await SetUiAsync(() => StatusText = $"Ищем новости про {SelectedCountry.DisplayName} на русском…");
-            var fetched = await _service.FetchPlanetNewsAsync(planetCode, _lifetime.Token);
-            var news = await _service.CompleteDescriptionsAsync(fetched, _lifetime.Token);
-            await Task.Run(() =>
-            {
-                _spaceRepository.DeleteNewsByCountry(planetCode);
-                _spaceRepository.SaveNews(news);
-            }, _lifetime.Token);
-            if (SelectedCountry.Code == planetCode) await LoadCachedNewsAsync(planetCode);
-        }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
-        catch (Exception exception) { Debug.WriteLine($"Planet news failed: {exception}"); }
     }
 
     private async Task LoadImagesAsync(IEnumerable<NewsArticle> items)

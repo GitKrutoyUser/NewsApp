@@ -89,53 +89,6 @@ public sealed class NewsService
         return isMoon && !isAnotherPlanet;
     }
 
-    public async Task<IReadOnlyList<NewsArticle>> FetchPlanetNewsAsync(string planetCode, CancellationToken cancellationToken = default)
-    {
-        var query = planetCode.ToUpperInvariant() switch
-        {
-            "SUN" => "солнечная активность солнце",
-            "MERCURY" => "Меркурий планета",
-            "VENUS" => "Венера планета",
-            "EARTH" => "Земля планета космос",
-            "MARS" => "Марс планета",
-            "JUPITER" => "Юпитер планета",
-            "SATURN" => "Сатурн планета",
-            "URANUS" => "Уран планета",
-            "NEPTUNE" => "Нептун планета",
-            _ => null
-        };
-        if (query is null) return Array.Empty<NewsArticle>();
-        using var response = await _httpClient.GetAsync($"{ApiUrl}&q={Uri.EscapeDataString(query)}&size=20", cancellationToken);
-        if (!response.IsSuccessStatusCode) return Array.Empty<NewsArticle>();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
-        var items = (result?.Results ?? new List<NewsApiItem>())
-            .Where(x => IsPlanetArticle(x, planetCode))
-            .GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase)
-            .Select(x => x.First())
-            .ToList();
-        foreach (var item in items) item.Country = planetCode.ToUpperInvariant();
-        return items.Select(ToArticle).Where(x => x is not null).Cast<NewsArticle>().ToList();
-    }
-
-    private static bool IsPlanetArticle(NewsApiItem item, string code)
-    {
-        var text = $"{item.Title} {item.Description}".ToLowerInvariant();
-        return code.ToUpperInvariant() switch
-        {
-            "SUN" => text.Contains("солн"),
-            "MERCURY" => text.Contains("меркур"),
-            "VENUS" => text.Contains("венер"),
-            "EARTH" => text.Contains("земл"),
-            "MARS" => text.Contains("марс") || text.Contains("марсиан"),
-            "JUPITER" => text.Contains("юпитер"),
-            "SATURN" => text.Contains("сатурн"),
-            "URANUS" => text.Contains("уран"),
-            "NEPTUNE" => text.Contains("нептун"),
-            _ => false
-        };
-    }
-
     private async Task<List<NewsApiItem>> FetchLunarNewsAsync(CancellationToken cancellationToken)
     {
         using var response = await _httpClient.GetAsync(LunarFeedUrl, cancellationToken);

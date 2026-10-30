@@ -134,6 +134,16 @@ public sealed class NewsRepository
         command.ExecuteNonQuery();
     }
 
+    public void DeleteNewsByCountry(string countryCode)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM news WHERE country_code = $country;";
+        command.Parameters.AddWithValue("$country", countryCode);
+        command.ExecuteNonQuery();
+    }
+
     public bool HasAnyNews()
     {
         using var connection = new SqliteConnection(_connectionString);

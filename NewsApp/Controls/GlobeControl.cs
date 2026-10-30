@@ -187,8 +187,8 @@ public sealed class GlobeControl : Control
             canvasCenter.Y - direction.Y / length * baseRadius * 1.05);
         earthCenter = Lerp(canvasCenter, earthFocusCenter, _focusLevel);
         moonCenter = Lerp(normalMoonCenter, canvasCenter, _focusLevel);
-        earthRadius = baseRadius * (1 - _focusLevel * 0.48);
-        moonRadius = Math.Max(18, baseRadius * (0.23 + _focusLevel * 0.42));
+        earthRadius = baseRadius * (1 - _focusLevel * 0.30);
+        moonRadius = Math.Min(earthRadius * 0.72, Math.Max(18, baseRadius * (0.23 + _focusLevel * 0.22)));
     }
 
     private static Point Lerp(Point first, Point second, double amount) =>

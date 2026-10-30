@@ -47,9 +47,7 @@ public sealed class NewsService
         try
         {
             var russianLunarNews = await FetchRussianLunarNewsAsync(requestToken);
-            articlesFromApi.AddRange(russianLunarNews.Count > 0
-                ? russianLunarNews
-                : await FetchLunarNewsAsync(requestToken));
+            articlesFromApi.AddRange(russianLunarNews);
         }
         catch (OperationCanceledException) when (requestToken.IsCancellationRequested) { }
 

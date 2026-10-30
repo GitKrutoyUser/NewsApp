@@ -102,10 +102,10 @@ public partial class MainWindow : Window
     private void AnimateNewsPane(bool visible)
     {
         if (MainLayout.Bounds.Width <= 0) return;
-        var available = Math.Max(0, MainLayout.Bounds.Width - MainLayout.ColumnSpacing);
-        _paneFromNews = MainLayout.ColumnDefinitions[1].ActualWidth;
-        if (_paneFromNews <= 1) _paneFromNews = visible ? 54 : Math.Max(54, available - 460);
-        _paneToNews = visible ? Math.Max(54, available - 460) : 54;
+        var available = Math.Max(0, MainLayout.Bounds.Width);
+        _paneFromNews = NewsPanel.Bounds.Width;
+        if (_paneFromNews <= 1) _paneFromNews = visible ? Math.Min(560, available * 0.42) : 54;
+        _paneToNews = visible ? Math.Clamp(Math.Min(560, available * 0.42), 430, 680) : 54;
         _paneAnimationStarted = DateTime.UtcNow;
         _paneAnimationTimer.Start();
     }
@@ -125,9 +125,8 @@ public partial class MainWindow : Window
 
     private void SetPaneWidths(double newsWidth)
     {
-        var available = Math.Max(0, MainLayout.Bounds.Width - MainLayout.ColumnSpacing);
-        MainLayout.ColumnDefinitions[1].Width = new GridLength(Math.Clamp(newsWidth, 54, available));
-        MainLayout.ColumnDefinitions[0].Width = new GridLength(Math.Max(0, available - newsWidth));
+        var available = Math.Max(0, MainLayout.Bounds.Width);
+        NewsPanel.Width = Math.Clamp(newsWidth, 54, Math.Max(54, available - 20));
     }
 
     private void SetPaneLayout(bool visible, bool animate)
@@ -139,13 +138,11 @@ public partial class MainWindow : Window
         }
         if (visible)
         {
-            MainLayout.ColumnDefinitions[0].Width = new GridLength(460);
-            MainLayout.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
+            NewsPanel.Width = Math.Clamp(Math.Min(560, MainLayout.Bounds.Width * 0.42), 430, 680);
         }
         else
         {
-            MainLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            MainLayout.ColumnDefinitions[1].Width = new GridLength(54);
+            NewsPanel.Width = 54;
         }
     }
 

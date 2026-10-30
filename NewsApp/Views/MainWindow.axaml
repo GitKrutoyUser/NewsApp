@@ -6,153 +6,112 @@
         x:Class="NewsApp.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Width="1440" Height="880" MinWidth="1100" MinHeight="680"
-        Background="#0D1117" Title="Глобус с новостями">
+        Background="#040811" Title="Глобус с новостями">
   <Window.Styles>
     <Style Selector="TextBlock.title"><Setter Property="FontSize" Value="30"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="#F4F7FB"/></Style>
-    <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="#8B98A9"/><Setter Property="FontSize" Value="13"/></Style>
+    <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="#AAB8CA"/><Setter Property="FontSize" Value="13"/></Style>
     <Style Selector="Button.country"><Setter Property="Background" Value="Transparent"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="14,11"/><Setter Property="Margin" Value="0,2"/></Style>
-    <Style Selector="Button.country:pointerover"><Setter Property="Background" Value="#1B2634"/></Style>
-    <Style Selector="Border.card"><Setter Property="Background" Value="#D9151D28"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="18"/><Setter Property="Margin" Value="0,0,0,14"/></Style>
-    <Style Selector="Button.link"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#72B7FF"/><Setter Property="Padding" Value="0"/></Style>
+    <Style Selector="Button.country:pointerover"><Setter Property="Background" Value="#331B3853"/></Style>
+    <Style Selector="Border.card"><Setter Property="Background" Value="#CC151D28"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="18"/><Setter Property="Margin" Value="0,0,0,14"/></Style>
+    <Style Selector="Button.link"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#8BC7FF"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="Button.articleTitle"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#F4F7FB"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="TextBlock.toolbarIcon"><Setter Property="Foreground" Value="#F6FAFF"/><Setter Property="FontSize" Value="21"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
-    <Style Selector="Border.newsPanel"><Setter Property="Background" Value="#D9101A26"/><Setter Property="CornerRadius" Value="18,0,0,18"/><Setter Property="BoxShadow" Value="-8 0 28 0 #55000000"/></Style>
-    <Style Selector="Button.panelHandle"><Setter Property="Background" Value="#1A2A3D"/><Setter Property="Foreground" Value="#D9E8F5"/><Setter Property="Padding" Value="7,16"/><Setter Property="Height" Value="54"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
-    <Style Selector="Button.panelHandle:pointerover"><Setter Property="Background" Value="#274564"/></Style>
-    <Style Selector="Button.refreshMain"><Setter Property="Background" Value="#277FD1"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="MinWidth" Value="52"/><Setter Property="Padding" Value="14,0"/></Style>
-    <Style Selector="Button.refreshMore"><Setter Property="Background" Value="#1E639F"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="Width" Value="34"/><Setter Property="Padding" Value="0"/></Style>
+    <Style Selector="Border.newsPanel"><Setter Property="Background" Value="#E6101926"/><Setter Property="CornerRadius" Value="20,0,0,20"/><Setter Property="BoxShadow" Value="-10 0 35 0 #88000000"/></Style>
+    <Style Selector="Button.panelHandle"><Setter Property="Background" Value="#CC1A4164"/><Setter Property="Foreground" Value="#EAF5FF"/><Setter Property="Padding" Value="7,16"/><Setter Property="Height" Value="54"/><Setter Property="Width" Value="52"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+    <Style Selector="Button.panelHandle:pointerover"><Setter Property="Background" Value="#EE2B6595"/></Style>
+    <Style Selector="Button.refreshMain"><Setter Property="Background" Value="#CC277FD1"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="MinWidth" Value="52"/><Setter Property="Padding" Value="14,0"/></Style>
+    <Style Selector="Button.refreshMore"><Setter Property="Background" Value="#CC1E639F"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="Width" Value="34"/><Setter Property="Padding" Value="0"/></Style>
   </Window.Styles>
-  <Grid>
-  <controls:StarfieldControl/>
-  <Grid x:Name="MainLayout" ColumnSpacing="18">
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="460"/>
-      <ColumnDefinition Width="*"/>
-    </Grid.ColumnDefinitions>
-    <Border Grid.Column="0" Background="#88111821" Padding="18" CornerRadius="0,18,18,0">
-      <Grid RowDefinitions="Auto,*,Auto,Auto,Auto">
-        <StackPanel Spacing="6">
-        </StackPanel>
-        <controls:GlobeControl x:Name="Globe" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" MinHeight="350"/>
-        <TextBlock Grid.Row="2" Text="{Binding SelectedCountry.DisplayName}" HorizontalAlignment="Center" FontSize="20" FontWeight="SemiBold" Foreground="#F4F7FB" Margin="0,10,0,2"/>
-        <Button x:Name="AutoRotationButton" Grid.Row="3" ToolTip.Tip="Автоповорот глобуса" Click="OnAutoRotationClick" HorizontalAlignment="Center" Padding="14,8" Margin="0,8,0,4" Background="#1B4F7A" Foreground="White" CornerRadius="7">
+  <Grid x:Name="MainLayout">
+    <controls:StarfieldControl/>
+    <controls:GlobeControl x:Name="Globe" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="18"/>
+    <controls:StarfieldControl DrawBackground="False" Opacity="0.28"/>
+
+    <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="28,0,0,28" Background="#88101929" CornerRadius="16" Padding="16,10">
+      <StackPanel Spacing="7">
+        <TextBlock Text="{Binding SelectedCountry.DisplayName}" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Foreground="#F4F7FB"/>
+        <Button x:Name="AutoRotationButton" ToolTip.Tip="Автоповорот глобуса" Click="OnAutoRotationClick" HorizontalAlignment="Center" Padding="14,8" Background="#CC1B4F7A" Foreground="White" CornerRadius="7">
           <TextBlock Classes="toolbarIcon" Text="▶"/>
         </Button>
-      </Grid>
+      </StackPanel>
     </Border>
-    <Border Grid.Column="1" Classes="newsPanel" Margin="0,18,26,18">
+
+    <Border x:Name="NewsPanel" Classes="newsPanel" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,18,26,18" Width="560">
       <Grid ColumnDefinitions="Auto,*">
-        <Button x:Name="NewsPaneToggleButton" Grid.Column="0" Classes="panelHandle" Command="{Binding ToggleNewsPaneCommand}" ToolTip.Tip="Свернуть или показать новости" CornerRadius="10" Margin="-1,0,10,0">
+        <Button x:Name="NewsPaneToggleButton" Grid.Column="0" Classes="panelHandle" Command="{Binding ToggleNewsPaneCommand}" ToolTip.Tip="Показать или скрыть новости" CornerRadius="10" Margin="-1,0,10,0">
           <TextBlock Text="&lt;" FontSize="22" FontWeight="SemiBold"/>
         </Button>
-    <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="0,12,12,12" IsVisible="{Binding IsNewsPaneVisible}">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="5">
-            <TextBlock Text="{Binding SelectedCountry.DisplayName}" Classes="title"/>
-            <TextBlock Text="{Binding SelectedCountry.NewNewsMarker}" Foreground="#FFCA4B" FontSize="24" VerticalAlignment="Center"/>
-          </StackPanel>
-          <TextBlock Text="Свежие события из локального кэша WorldPulse" Classes="muted" Margin="0,6,0,0"/>
-        </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="0" VerticalAlignment="Top">
-        <Button x:Name="RefreshButton" Classes="refreshMain" Command="{Binding RefreshCommand}" ToolTip.Tip="Обновить через API" CornerRadius="9,0,0,9" IsEnabled="{Binding !IsRefreshing}">
-          <TextBlock x:Name="RefreshIcon" Classes="toolbarIcon" Text="⟳"/>
-        </Button>
-        <Button Classes="refreshMore" ToolTip.Tip="Выбрать способ обновления" CornerRadius="0,9,9,0" IsEnabled="{Binding !IsRefreshing}">
-          <TextBlock Text="⌄" FontSize="17" FontWeight="Bold"/>
-          <Button.Flyout>
-            <MenuFlyout>
-              <MenuItem Header="Показать из базы" Command="{Binding LoadCacheCommand}"/>
-              <MenuItem Header="Обновить через API" Command="{Binding RefreshCommand}"/>
-            </MenuFlyout>
-          </Button.Flyout>
-        </Button>
-        </StackPanel>
-      </Grid>
-      <TextBlock Grid.Row="1" Text="{Binding StatusText}" Classes="muted" Margin="0,22,0,16"/>
-      <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" IsVisible="{Binding !IsReadingArticle}">
-        <ItemsControl ItemsSource="{Binding Articles}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="models:NewsArticle">
-              <Border Classes="card">
-                <Grid ColumnDefinitions="*,190" ColumnSpacing="20">
-                  <StackPanel Spacing="9">
-                    <TextBlock Text="{Binding CountryName}" Foreground="#72B7FF" FontSize="12" FontWeight="Bold"/>
-                    <Button Classes="articleTitle" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}">
-                      <TextBlock Text="{Binding Title}" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                    </Button>
-                    <TextBlock Text="{Binding Description}" Classes="muted" FontSize="14" TextWrapping="Wrap"/>
-                    <StackPanel Spacing="8" Margin="0,8,0,0">
-                      <StackPanel Orientation="Horizontal" Spacing="4">
-                        <TextBlock Text="Опубликовано:" Classes="muted"/>
-                        <TextBlock Text="{Binding PublishedAtText}" Classes="muted"/>
-                      </StackPanel>
-                      <StackPanel Orientation="Horizontal" Spacing="14">
-                        <Button Content="Читать в приложении →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/>
-                        <Button Content="Читать на сайте ↗" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleInBrowserCommand}" CommandParameter="{Binding}"/>
-                      </StackPanel>
-                    </StackPanel>
-                  </StackPanel>
-                  <Border Grid.Column="1" Background="#202B39" CornerRadius="10" ClipToBounds="True">
-                    <Image Source="{Binding ImageBitmap}" Stretch="Uniform" Width="190" MaxHeight="180" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                  </Border>
-                </Grid>
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </ScrollViewer>
-      <Grid Grid.Row="2" IsVisible="{Binding IsReadingArticle}" ColumnDefinitions="Auto,*" ColumnSpacing="12">
-        <StackPanel Spacing="10" VerticalAlignment="Top">
-          <Button ToolTip.Tip="Назад к новостям" Command="{Binding CloseArticleCommand}" Padding="12,9">
-            <TextBlock Classes="toolbarIcon" Text="←"/>
-          </Button>
-          <Button ToolTip.Tip="В начало статьи" Click="OnArticleScrollToTop" Padding="12,9">
-            <TextBlock Classes="toolbarIcon" Text="↑"/>
-          </Button>
-        </StackPanel>
-        <ScrollViewer x:Name="ArticleScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto">
-          <Border Background="#111A25" CornerRadius="16" Padding="28" HorizontalAlignment="Center" MaxWidth="900">
-            <StackPanel Spacing="18">
-            <Border Background="#182536" CornerRadius="12" Padding="20">
-              <StackPanel Spacing="10">
-                <TextBlock Text="{Binding OpenedArticle.CountryName}" Foreground="#72B7FF" FontSize="13" FontWeight="Bold"/>
-                <TextBlock Text="{Binding OpenedArticle.Title}" FontSize="30" FontWeight="Bold" Foreground="#F7FAFD" TextWrapping="Wrap"/>
-                <StackPanel Orientation="Horizontal" Spacing="12">
-                  <TextBlock Text="{Binding OpenedArticle.PublishedAtText}" Classes="muted"/>
-                  <TextBlock Text="•" Classes="muted"/>
-                  <TextBlock Text="Встроенное чтение" Classes="muted"/>
-                  <Button Classes="link" Command="{Binding OpenArticleInBrowserCommand}" CommandParameter="{Binding OpenedArticle}">
-                    <StackPanel Orientation="Horizontal" Spacing="5">
-                      <TextBlock Text="Открыть на сайте"/>
-                      <TextBlock Classes="toolbarIcon" FontSize="15" Text="↗"/>
-                    </StackPanel>
-                  </Button>
-                </StackPanel>
+        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="0,12,12,12" IsVisible="{Binding IsNewsPaneVisible}">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <TextBlock Text="{Binding SelectedCountry.DisplayName}" Classes="title"/>
+                <TextBlock Text="{Binding SelectedCountry.NewNewsMarker}" Foreground="#FFCA4B" FontSize="24" VerticalAlignment="Center"/>
               </StackPanel>
-            </Border>
-            <Image Source="{Binding OpenedArticle.ImageBitmap}" MaxHeight="360" Stretch="Uniform" HorizontalAlignment="Center"/>
-            <TextBlock Text="Загрузка материалов статьи…" Classes="muted" IsVisible="{Binding IsArticleLoading}"/>
-            <ItemsControl ItemsSource="{Binding OpenedArticleParagraphs}">
+              <TextBlock Text="Свежие события из локального кэша WorldPulse" Classes="muted" Margin="0,6,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="0" VerticalAlignment="Top">
+              <Button x:Name="RefreshButton" Classes="refreshMain" Command="{Binding RefreshCommand}" ToolTip.Tip="Обновить через API" CornerRadius="9,0,0,9" IsEnabled="{Binding !IsRefreshing}">
+                <TextBlock x:Name="RefreshIcon" Classes="toolbarIcon" Text="⟳"/>
+              </Button>
+              <Button Classes="refreshMore" ToolTip.Tip="Выбрать способ обновления" CornerRadius="0,9,9,0" IsEnabled="{Binding !IsRefreshing}">
+                <TextBlock Text="⌄" FontSize="17" FontWeight="Bold"/>
+                <Button.Flyout>
+                  <MenuFlyout>
+                    <MenuItem Header="Показать из базы" Command="{Binding LoadCacheCommand}"/>
+                    <MenuItem Header="Обновить через API" Command="{Binding RefreshCommand}"/>
+                  </MenuFlyout>
+                </Button.Flyout>
+              </Button>
+            </StackPanel>
+          </Grid>
+          <TextBlock Grid.Row="1" Text="{Binding StatusText}" Classes="muted" Margin="0,22,0,16"/>
+          <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" IsVisible="{Binding !IsReadingArticle}">
+            <ItemsControl ItemsSource="{Binding Articles}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <TextBlock Text="{Binding}" FontSize="17" LineHeight="29" Foreground="#D8E1EB" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                <DataTemplate x:DataType="models:NewsArticle">
+                  <Border Classes="card">
+                    <Grid ColumnDefinitions="*,190" ColumnSpacing="20">
+                      <StackPanel Spacing="9">
+                        <TextBlock Text="{Binding CountryName}" Foreground="#8BC7FF" FontSize="12" FontWeight="Bold"/>
+                        <Button Classes="articleTitle" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}">
+                          <TextBlock Text="{Binding Title}" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        </Button>
+                        <TextBlock Text="{Binding Description}" Classes="muted" FontSize="14" TextWrapping="Wrap"/>
+                        <StackPanel Spacing="8" Margin="0,8,0,0">
+                          <StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="Опубликовано:" Classes="muted"/><TextBlock Text="{Binding PublishedAtText}" Classes="muted"/></StackPanel>
+                          <StackPanel Orientation="Horizontal" Spacing="14"><Button Content="Читать в приложении →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/><Button Content="Читать на сайте ↗" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleInBrowserCommand}" CommandParameter="{Binding}"/></StackPanel>
+                        </StackPanel>
+                      </StackPanel>
+                      <Border Grid.Column="1" Background="#66202B39" CornerRadius="10" ClipToBounds="True"><Image Source="{Binding ImageBitmap}" Stretch="Uniform" Width="190" MaxHeight="180" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                    </Grid>
+                  </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </StackPanel>
-          </Border>
-        </ScrollViewer>
-      </Grid>
-    </Grid>
+          </ScrollViewer>
+          <Grid Grid.Row="2" IsVisible="{Binding IsReadingArticle}" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+            <StackPanel Spacing="10" VerticalAlignment="Top">
+              <Button ToolTip.Tip="Назад к новостям" Command="{Binding CloseArticleCommand}" Padding="12,9"><TextBlock Classes="toolbarIcon" Text="←"/></Button>
+              <Button ToolTip.Tip="В начало статьи" Click="OnArticleScrollToTop" Padding="12,9"><TextBlock Classes="toolbarIcon" Text="↑"/></Button>
+            </StackPanel>
+            <ScrollViewer x:Name="ArticleScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto">
+              <Border Background="#CC111A25" CornerRadius="16" Padding="28" HorizontalAlignment="Center" MaxWidth="900">
+                <StackPanel Spacing="18">
+                  <Border Background="#CC182536" CornerRadius="12" Padding="20"><StackPanel Spacing="10"><TextBlock Text="{Binding OpenedArticle.CountryName}" Foreground="#8BC7FF" FontSize="13" FontWeight="Bold"/><TextBlock Text="{Binding OpenedArticle.Title}" FontSize="30" FontWeight="Bold" Foreground="#F7FAFD" TextWrapping="Wrap"/><StackPanel Orientation="Horizontal" Spacing="12"><TextBlock Text="{Binding OpenedArticle.PublishedAtText}" Classes="muted"/><TextBlock Text="•" Classes="muted"/><TextBlock Text="Встроенное чтение" Classes="muted"/><Button Classes="link" Command="{Binding OpenArticleInBrowserCommand}" CommandParameter="{Binding OpenedArticle}"><TextBlock Text="Открыть на сайте ↗"/></Button></StackPanel></StackPanel></Border>
+                  <Image Source="{Binding OpenedArticle.ImageBitmap}" MaxHeight="360" Stretch="Uniform" HorizontalAlignment="Center"/>
+                  <TextBlock Text="Загрузка материалов статьи…" Classes="muted" IsVisible="{Binding IsArticleLoading}"/>
+                  <ItemsControl ItemsSource="{Binding OpenedArticleParagraphs}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="17" LineHeight="29" Foreground="#D8E1EB" TextWrapping="Wrap" Margin="0,0,0,12"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                </StackPanel>
+              </Border>
+            </ScrollViewer>
+          </Grid>
+        </Grid>
       </Grid>
     </Border>
-  </Grid>
-  <controls:StarfieldControl DrawBackground="False" Opacity="0.72"/>
-  <Border IsVisible="{Binding IsLoading}" Background="#050A10" ZIndex="20">
-    <Border Background="#0B1824" CornerRadius="200" Padding="4" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 8 30 0 #88000000">
-      <controls:GlobeControl x:Name="LoadingGlobe" Width="330" Height="330" IsHitTestVisible="False"/>
+
+    <Border IsVisible="{Binding IsLoading}" Background="#050A10" ZIndex="20">
+      <Border Background="#0B1824" CornerRadius="200" Padding="4" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 8 30 0 #88000000"><controls:GlobeControl x:Name="LoadingGlobe" Width="330" Height="330" IsHitTestVisible="False"/></Border>
     </Border>
-  </Border>
   </Grid>
 </Window>

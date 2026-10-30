@@ -178,15 +178,16 @@ public sealed class GlobeControl : Control
     private static (double X, double Y, double Size, byte Alpha)[] CreateStars()
     {
         var random = new Random(27101986);
-        return Enumerable.Range(0, 150)
+        return Enumerable.Range(0, 360)
             .Select(_ => (random.NextDouble(), random.NextDouble(),
-                0.55 + random.NextDouble() * 1.7,
-                (byte)(75 + random.Next(0, 150))))
+                0.4 + random.NextDouble() * 1.45,
+                (byte)(65 + random.Next(0, 170))))
             .ToArray();
     }
 
     private void DrawStars(DrawingContext context)
     {
+        context.FillRectangle(new SolidColorBrush(Color.Parse("#050A14")), new Rect(0, 0, Bounds.Width, Bounds.Height));
         foreach (var star in _stars)
         {
             var point = new Point(star.X * Bounds.Width, star.Y * Bounds.Height);

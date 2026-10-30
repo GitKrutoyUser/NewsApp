@@ -41,6 +41,7 @@ public sealed class GlobeControl : Control
     public string? SelectedCountryCode { get; private set; }
     public string? SelectedCountryName { get; private set; }
     public bool IsAutoRotating { get; private set; }
+    public double ViewCenterX { get; set; } = double.NaN;
 
     public void MarkNewCountries(IEnumerable<string> codes)
     {
@@ -198,7 +199,7 @@ public sealed class GlobeControl : Control
 
     private void GetSceneGeometry(out Point earthCenter, out double earthRadius, out Point moonCenter, out double moonRadius, out double moonOrbit)
     {
-        var canvasCenter = new Point(Bounds.Width / 2, Bounds.Height / 2);
+        var canvasCenter = new Point(double.IsNaN(ViewCenterX) ? Bounds.Width / 2 : ViewCenterX, Bounds.Height / 2);
         var baseRadius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * 0.62 * _zoom);
         moonOrbit = baseRadius * 1.38;
         var normalMoonCenter = new Point(

@@ -127,6 +127,16 @@ public partial class MainWindow : Window
     {
         var available = Math.Max(0, MainLayout.Bounds.Width);
         NewsPanel.Width = Math.Clamp(newsWidth, 54, Math.Max(54, available - 20));
+        UpdateGlobeCenter(newsWidth);
+    }
+
+    private void UpdateGlobeCenter(double newsWidth)
+    {
+        var effectiveNewsWidth = Math.Max(0, newsWidth - 54);
+        Globe.ViewCenterX = effectiveNewsWidth < 1
+            ? MainLayout.Bounds.Width / 2
+            : Math.Max(180, (MainLayout.Bounds.Width - effectiveNewsWidth - 26) / 2);
+        Globe.InvalidateVisual();
     }
 
     private void SetPaneLayout(bool visible, bool animate)
@@ -139,10 +149,12 @@ public partial class MainWindow : Window
         if (visible)
         {
             NewsPanel.Width = Math.Clamp(Math.Min(560, MainLayout.Bounds.Width * 0.42), 430, 680);
+            UpdateGlobeCenter(NewsPanel.Width);
         }
         else
         {
             NewsPanel.Width = 54;
+            UpdateGlobeCenter(0);
         }
     }
 

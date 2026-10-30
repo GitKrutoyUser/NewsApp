@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 
@@ -21,6 +22,7 @@ public sealed class GlobeControl : Control
     }
 
     private readonly List<CountryShape> _countries = new();
+    private readonly Bitmap? _moonTexture;
     private Point _lastPointer;
     private bool _dragging;
     private bool _moved;
@@ -48,6 +50,12 @@ public sealed class GlobeControl : Control
     {
         Focusable = true;
         LoadGeoJson();
+        try
+        {
+            using var stream = AssetLoader.Open(new Uri("avares://NewsApp/Assets/moon-texture.jpg"));
+            _moonTexture = new Bitmap(stream);
+        }
+        catch { _moonTexture = null; }
         _rotationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _rotationTimer.Tick += (_, _) =>
         {
@@ -154,27 +162,28 @@ public sealed class GlobeControl : Control
 
     private void DrawMoon(DrawingContext context, Point center, double earthRadius)
     {
-        var orbitRadius = earthRadius * 1.05;
+        var orbitRadius = earthRadius * 1.28;
         var moonCenter = new Point(
             center.X + Math.Cos(_moonAngle) * orbitRadius,
             center.Y + Math.Sin(_moonAngle) * orbitRadius * 0.62);
-        var moonRadius = Math.Max(10, earthRadius * 0.13);
-        var moonBrush = new SolidColorBrush(Color.Parse("#B8BEC2"));
-        var moonPen = new Pen(new SolidColorBrush(Color.Parse("#E4E8E8")), Math.Max(0.8, earthRadius * 0.008));
-        context.DrawEllipse(moonBrush, moonPen, moonCenter, moonRadius, moonRadius);
-
-        var craters = new (double X, double Y, double R)[]
+        var moonRadius = Math.Max(16, earthRadius * 0.23);
+        var moonRect = new Rect(moonCenter.X - moonRadius, moonCenter.Y - moonRadius, moonRadius * 2, moonRadius * 2);
+        var moonPen = new Pen(new SolidColorBrush(Color.Parse("#E4E8E8")), Math.Max(1, earthRadius * 0.009));
+        if (_moonTexture is not null)
         {
-            (-0.38, -0.18, 0.18), (0.22, -0.34, 0.12), (0.42, 0.16, 0.2),
-            (-0.14, 0.34, 0.13), (-0.52, 0.32, 0.08), (0.08, 0.08, 0.07)
-        };
-        foreach (var crater in craters)
-        {
-            var point = new Point(moonCenter.X + crater.X * moonRadius, moonCenter.Y + crater.Y * moonRadius);
-            var craterRadius = crater.R * moonRadius;
-            context.DrawEllipse(new SolidColorBrush(Color.Parse("#8B9297")),
-                new Pen(new SolidColorBrush(Color.Parse("#D2D7D8")), 0.5), point, craterRadius, craterRadius * 0.78);
+            using (context.PushClip(new RoundedRect(moonRect, moonRadius)))
+            {
+                var source = new Rect(0, 0, _moonTexture.PixelSize.Width, _moonTexture.PixelSize.Height);
+                context.DrawImage(_moonTexture, source, moonRect);
+                context.DrawEllipse(new SolidColorBrush(Color.FromArgb(58, 0, 0, 0)), null,
+                    new Point(moonCenter.X + moonRadius * 0.25, moonCenter.Y), moonRadius * 0.95, moonRadius);
+            }
         }
+        else
+        {
+            context.DrawEllipse(new SolidColorBrush(Color.Parse("#B8BEC2")), null, moonCenter, moonRadius, moonRadius);
+        }
+        context.DrawEllipse(null, moonPen, moonCenter, moonRadius, moonRadius);
     }
 
     private static IBrush CountryColor(CountryShape country)
@@ -334,9 +343,12 @@ public sealed class GlobeControl : Control
             {
                 var code = HitTestCountry(e.GetPosition(this)) ?? "WORLD";
                 SelectedCountryCode = code;
-                SelectedCountryName = code == "WORLD"
-                    ? "Мир"
-                    : _countries.FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase))?.Name ?? code;
+                SelectedCountryName = code switch
+                {
+                    "WORLD" => "Мир",
+                    "MOON" => "Луна",
+                    _ => _countries.FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase))?.Name ?? code
+                };
                 CountrySelected?.Invoke(this, code);
                 InvalidateVisual();
             }
@@ -356,7 +368,14 @@ public sealed class GlobeControl : Control
     private string? HitTestCountry(Point screenPoint)
     {
         var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
-        var radius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * _zoom);
+        var radius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * 0.73 * _zoom);
+        var moonOrbit = radius * 1.28;
+        var moonCenter = new Point(
+            center.X + Math.Cos(_moonAngle) * moonOrbit,
+            center.Y + Math.Sin(_moonAngle) * moonOrbit * 0.62);
+        var moonDistance = screenPoint - moonCenter;
+        if (Math.Sqrt(moonDistance.X * moonDistance.X + moonDistance.Y * moonDistance.Y) <= radius * 0.23)
+            return "MOON";
         var nx = (screenPoint.X - center.X) / radius;
         var ny = -(screenPoint.Y - center.Y) / radius;
         var squared = nx * nx + ny * ny;

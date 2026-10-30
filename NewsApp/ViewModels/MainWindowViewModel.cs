@@ -23,6 +23,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public ObservableCollection<Country> Countries { get; } = new(new[]
     {
         new Country("WORLD", "Мир", "🌐"),
+        new Country("MOON", "Луна", "◐"),
         new Country("US", "США", "🇺🇸"),
         new Country("RU", "Россия", "🇷🇺"),
         new Country("DE", "Германия", "🇩🇪"),
@@ -96,6 +97,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     [RelayCommand]
     private void SelectCountry(Country country) => SelectedCountry = country;
+
+    [RelayCommand]
+    private void SelectMoon() => SelectedCountry = Countries.First(x => x.Code == "MOON");
 
     [RelayCommand]
     private Task RefreshAsync() => RefreshInternalAsync(true);

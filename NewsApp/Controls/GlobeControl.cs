@@ -27,6 +27,7 @@ public sealed class GlobeControl : Control
     private double _yaw = -0.55;
     private double _pitch = 0.12;
     private double _zoom = 1.0;
+    private double _moonAngle = -0.45;
     private readonly HashSet<string> _newCountryCodes = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherTimer _rotationTimer;
 
@@ -50,16 +51,16 @@ public sealed class GlobeControl : Control
         _rotationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _rotationTimer.Tick += (_, _) =>
         {
-            _yaw += 0.0045;
+            _moonAngle += 0.008;
+            if (IsAutoRotating) _yaw += 0.0045;
             InvalidateVisual();
         };
+        _rotationTimer.Start();
     }
 
     public void ToggleAutoRotation()
     {
         IsAutoRotating = !IsAutoRotating;
-        if (IsAutoRotating) _rotationTimer.Start();
-        else _rotationTimer.Stop();
     }
 
     public void StopAutoRotation()
@@ -120,7 +121,7 @@ public sealed class GlobeControl : Control
     public override void Render(DrawingContext context)
     {
         var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
-        var radius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * _zoom);
+        var radius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * 0.73 * _zoom);
         context.DrawEllipse(new SolidColorBrush(Color.Parse("#142B3A")), new Pen(new SolidColorBrush(Color.Parse("#78A7A9")), 2), center, radius, radius);
 
         var occupiedLabels = new List<Rect>();
@@ -148,6 +149,32 @@ public sealed class GlobeControl : Control
 
         DrawGlobeGrid(context, center, radius);
         context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.Parse("#A7C4B2")), 1.1), center, radius, radius);
+        DrawMoon(context, center, radius);
+    }
+
+    private void DrawMoon(DrawingContext context, Point center, double earthRadius)
+    {
+        var orbitRadius = earthRadius * 1.05;
+        var moonCenter = new Point(
+            center.X + Math.Cos(_moonAngle) * orbitRadius,
+            center.Y + Math.Sin(_moonAngle) * orbitRadius * 0.62);
+        var moonRadius = Math.Max(10, earthRadius * 0.13);
+        var moonBrush = new SolidColorBrush(Color.Parse("#B8BEC2"));
+        var moonPen = new Pen(new SolidColorBrush(Color.Parse("#E4E8E8")), Math.Max(0.8, earthRadius * 0.008));
+        context.DrawEllipse(moonBrush, moonPen, moonCenter, moonRadius, moonRadius);
+
+        var craters = new (double X, double Y, double R)[]
+        {
+            (-0.38, -0.18, 0.18), (0.22, -0.34, 0.12), (0.42, 0.16, 0.2),
+            (-0.14, 0.34, 0.13), (-0.52, 0.32, 0.08), (0.08, 0.08, 0.07)
+        };
+        foreach (var crater in craters)
+        {
+            var point = new Point(moonCenter.X + crater.X * moonRadius, moonCenter.Y + crater.Y * moonRadius);
+            var craterRadius = crater.R * moonRadius;
+            context.DrawEllipse(new SolidColorBrush(Color.Parse("#8B9297")),
+                new Pen(new SolidColorBrush(Color.Parse("#D2D7D8")), 0.5), point, craterRadius, craterRadius * 0.78);
+        }
     }
 
     private static IBrush CountryColor(CountryShape country)

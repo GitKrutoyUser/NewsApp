@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Xml.Linq;
 using Avalonia.Media.Imaging;
 using HtmlAgilityPack;
 using NewsApp.Models;
@@ -10,6 +11,8 @@ namespace NewsApp.Services;
 public sealed class NewsService
 {
     private const string ApiUrl = "https://freenewsapi.ai/v1/search?lang=ru";
+    private const string LunarFeedUrl = "https://www.nasa.gov/missions/artemis/feed/";
+    private static readonly XNamespace ContentNamespace = "http://purl.org/rss/1.0/modules/content/";
     private static readonly string[] WorldCountryCodes = { "US", "RU", "DE", "FR", "GB", "CN", "JP", "IN", "BR", "CA", "AU", "IT", "ES", "TR", "KR", "MX", "PL", "NL", "SE", "CH", "IL", "UA", "ZA" };
     private readonly HttpClient _httpClient;
 
@@ -41,6 +44,12 @@ public sealed class NewsService
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
 
+        try
+        {
+            articlesFromApi.AddRange(await FetchLunarNewsAsync(requestToken));
+        }
+        catch (OperationCanceledException) when (requestToken.IsCancellationRequested) { }
+
         var articles = articlesFromApi
             .Where(x => !string.IsNullOrWhiteSpace(x.Url))
             .GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase)
@@ -51,6 +60,43 @@ public sealed class NewsService
             .ToList();
 
         return articles;
+    }
+
+    private async Task<List<NewsApiItem>> FetchLunarNewsAsync(CancellationToken cancellationToken)
+    {
+        using var response = await _httpClient.GetAsync(LunarFeedUrl, cancellationToken);
+        if (!response.IsSuccessStatusCode) return new List<NewsApiItem>();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var document = await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken);
+        var items = new List<NewsApiItem>();
+        foreach (var item in document.Descendants("item").Take(20))
+        {
+            var url = item.Element("link")?.Value.Trim();
+            var title = item.Element("title")?.Value.Trim();
+            if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(title)) continue;
+            var description = item.Element("description")?.Value.Trim();
+            var encoded = item.Element(ContentNamespace + "encoded")?.Value;
+            var image = ExtractFeedImage(encoded);
+            items.Add(new NewsApiItem
+            {
+                Url = url,
+                Country = "MOON",
+                Title = title,
+                Description = string.IsNullOrWhiteSpace(description) ? "Новости лунных миссий NASA." : HtmlEntity.DeEntitize(description),
+                Image = image,
+                PublishedAt = item.Element("pubDate")?.Value,
+                CrawledAt = item.Element("pubDate")?.Value
+            });
+        }
+        return items;
+    }
+
+    private static string? ExtractFeedImage(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return null;
+        var document = new HtmlDocument();
+        document.LoadHtml(html);
+        return document.DocumentNode.SelectSingleNode("//img")?.GetAttributeValue("src", string.Empty);
     }
 
     public async Task<Bitmap?> DownloadImageAsync(string? imageUrl, CancellationToken cancellationToken = default)
@@ -235,7 +281,7 @@ public sealed class NewsService
         "CN" => "Китай", "JP" => "Япония", "IN" => "Индия", "BR" => "Бразилия", "CA" => "Канада",
         "AU" => "Австралия", "IT" => "Италия", "ES" => "Испания", "TR" => "Турция", "KR" => "Южная Корея",
         "MX" => "Мексика", "PL" => "Польша", "NL" => "Нидерланды", "SE" => "Швеция", "CH" => "Швейцария",
-        "IL" => "Израиль", "UA" => "Украина", "ZA" => "ЮАР", _ => "Мир"
+        "IL" => "Израиль", "UA" => "Украина", "ZA" => "ЮАР", "MOON" => "Луна", _ => "Мир"
     };
 
     private async Task<string?> TryGetOgImageAsync(string articleUrl, CancellationToken cancellationToken)

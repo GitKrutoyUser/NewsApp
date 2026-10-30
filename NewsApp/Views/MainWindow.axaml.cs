@@ -104,8 +104,8 @@ public partial class MainWindow : Window
         if (MainLayout.Bounds.Width <= 0) return;
         var available = Math.Max(0, MainLayout.Bounds.Width);
         _paneFromNews = NewsPanel.Bounds.Width;
-        if (_paneFromNews <= 1) _paneFromNews = visible ? Math.Min(560, available * 0.42) : 54;
-        _paneToNews = visible ? Math.Clamp(Math.Min(560, available * 0.42), 430, 680) : 54;
+        if (_paneFromNews <= 1) _paneFromNews = visible ? ExpandedNewsWidth() : 54;
+        _paneToNews = visible ? ExpandedNewsWidth() : 54;
         _paneAnimationStarted = DateTime.UtcNow;
         _paneAnimationTimer.Start();
     }
@@ -139,6 +139,9 @@ public partial class MainWindow : Window
         Globe.InvalidateVisual();
     }
 
+    private double ExpandedNewsWidth() =>
+        Math.Clamp(Math.Min(720, MainLayout.Bounds.Width * 0.52), 520, 720);
+
     private void SetPaneLayout(bool visible, bool animate)
     {
         if (animate)
@@ -148,7 +151,7 @@ public partial class MainWindow : Window
         }
         if (visible)
         {
-            NewsPanel.Width = Math.Clamp(Math.Min(560, MainLayout.Bounds.Width * 0.42), 430, 680);
+            NewsPanel.Width = ExpandedNewsWidth();
             UpdateGlobeCenter(NewsPanel.Width);
         }
         else

@@ -36,7 +36,7 @@
       </StackPanel>
     </Border>
 
-    <Border x:Name="NewsPanel" Classes="newsPanel" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,18,26,18" Width="560">
+    <Border x:Name="NewsPanel" Classes="newsPanel" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,18,26,18" Width="720">
       <Grid ColumnDefinitions="Auto,*">
         <Button x:Name="NewsPaneToggleButton" Grid.Column="0" Classes="panelHandle" Command="{Binding ToggleNewsPaneCommand}" ToolTip.Tip="Показать или скрыть новости" CornerRadius="10" Margin="-1,0,10,0">
           <TextBlock Text="&lt;" FontSize="22" FontWeight="SemiBold"/>

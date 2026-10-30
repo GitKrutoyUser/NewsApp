@@ -26,20 +26,18 @@
   <controls:StarfieldControl/>
   <Grid x:Name="MainLayout" ColumnSpacing="18">
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="390"/>
+      <ColumnDefinition Width="460"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
-    <Border Grid.Column="0" Background="#CC111821" Padding="18" CornerRadius="0,18,18,0">
+    <Border Grid.Column="0" Background="#88111821" Padding="18" CornerRadius="0,18,18,0">
       <Grid RowDefinitions="Auto,*,Auto,Auto,Auto">
         <StackPanel Spacing="6">
-          <Button Content="◐  Лунные новости NASA" Command="{Binding SelectMoonCommand}" Background="#1A2838" Foreground="#DDEBFA" CornerRadius="8" Padding="10,8" HorizontalAlignment="Stretch"/>
         </StackPanel>
         <controls:GlobeControl x:Name="Globe" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" MinHeight="350"/>
         <TextBlock Grid.Row="2" Text="{Binding SelectedCountry.DisplayName}" HorizontalAlignment="Center" FontSize="20" FontWeight="SemiBold" Foreground="#F4F7FB" Margin="0,10,0,2"/>
         <Button x:Name="AutoRotationButton" Grid.Row="3" ToolTip.Tip="Автоповорот глобуса" Click="OnAutoRotationClick" HorizontalAlignment="Center" Padding="14,8" Margin="0,8,0,4" Background="#1B4F7A" Foreground="White" CornerRadius="7">
           <TextBlock Classes="toolbarIcon" Text="▶"/>
         </Button>
-        <TextBlock Grid.Row="4" Text="Перетаскивание — вручную, колесо — масштаб" Classes="muted" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
       </Grid>
     </Border>
     <Border Grid.Column="1" Classes="newsPanel" Margin="0,18,26,18">
@@ -150,6 +148,7 @@
       </Grid>
     </Border>
   </Grid>
+  <controls:StarfieldControl DrawBackground="False" Opacity="0.72"/>
   <Border IsVisible="{Binding IsLoading}" Background="#050A10" ZIndex="20">
     <Border Background="#0B1824" CornerRadius="200" Padding="4" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 8 30 0 #88000000">
       <controls:GlobeControl x:Name="LoadingGlobe" Width="330" Height="330" IsHitTestVisible="False"/>

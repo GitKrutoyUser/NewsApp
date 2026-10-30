@@ -104,8 +104,8 @@ public partial class MainWindow : Window
         if (MainLayout.Bounds.Width <= 0) return;
         var available = Math.Max(0, MainLayout.Bounds.Width - MainLayout.ColumnSpacing);
         _paneFromNews = MainLayout.ColumnDefinitions[1].ActualWidth;
-        if (_paneFromNews <= 1) _paneFromNews = visible ? 54 : Math.Max(54, available - 390);
-        _paneToNews = visible ? Math.Max(54, available - 390) : 54;
+        if (_paneFromNews <= 1) _paneFromNews = visible ? 54 : Math.Max(54, available - 460);
+        _paneToNews = visible ? Math.Max(54, available - 460) : 54;
         _paneAnimationStarted = DateTime.UtcNow;
         _paneAnimationTimer.Start();
     }
@@ -139,7 +139,7 @@ public partial class MainWindow : Window
         }
         if (visible)
         {
-            MainLayout.ColumnDefinitions[0].Width = new GridLength(390);
+            MainLayout.ColumnDefinitions[0].Width = new GridLength(460);
             MainLayout.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
         }
         else

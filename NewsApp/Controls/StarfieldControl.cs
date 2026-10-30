@@ -11,6 +11,8 @@ public sealed class StarfieldControl : Control
     private readonly DispatcherTimer _timer;
     private double _time;
 
+    public bool DrawBackground { get; set; } = true;
+
     private sealed record Star(double X, double Y, double Speed, double Size, double Phase, byte Alpha, bool Blue);
 
     public StarfieldControl()
@@ -32,8 +34,11 @@ public sealed class StarfieldControl : Control
         var height = Bounds.Height;
         if (width <= 0 || height <= 0) return;
 
-        context.FillRectangle(new SolidColorBrush(Color.Parse("#040811")), new Rect(0, 0, width, height));
-        DrawNebula(context, width, height);
+        if (DrawBackground)
+        {
+            context.FillRectangle(new SolidColorBrush(Color.Parse("#040811")), new Rect(0, 0, width, height));
+            DrawNebula(context, width, height);
+        }
 
         foreach (var star in _stars)
         {

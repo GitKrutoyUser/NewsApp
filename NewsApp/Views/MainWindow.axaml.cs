@@ -51,6 +51,7 @@ public partial class MainWindow : Window
         if (_viewModel is not null)
         {
             Globe.CountrySelected -= OnCountrySelected;
+            SolarSystem.BodySelected -= OnBodySelected;
             _viewModel.NewCountriesChanged -= OnNewCountriesChanged;
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         }
@@ -58,6 +59,7 @@ public partial class MainWindow : Window
         if (_viewModel is not null)
         {
             Globe.CountrySelected += OnCountrySelected;
+            SolarSystem.BodySelected += OnBodySelected;
             _viewModel.NewCountriesChanged += OnNewCountriesChanged;
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             UpdateNewsPaneButton();
@@ -151,6 +153,9 @@ public partial class MainWindow : Window
 
     private void OnCountrySelected(object? sender, string countryCode) =>
         _viewModel?.SelectCountryCode(countryCode, Globe.SelectedCountryName);
+
+    private void OnBodySelected(object? sender, (string Code, string Name) body) =>
+        _viewModel?.SelectCountryCode(body.Code, body.Name);
 
     private void OnNewCountriesChanged(object? sender, IReadOnlySet<string> codes) => Globe.MarkNewCountries(codes);
 

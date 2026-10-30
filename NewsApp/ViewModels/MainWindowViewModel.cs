@@ -67,6 +67,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isLoading = true;
     [ObservableProperty] private bool _isNewsPaneVisible = true;
+    [ObservableProperty] private bool _isSolarSystemVisible;
     [ObservableProperty] private string _statusText = "Проверяем локальный кэш…";
     [ObservableProperty] private bool _isReadingArticle;
     [ObservableProperty] private NewsArticle? _openedArticle;
@@ -130,6 +131,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void ToggleNewsPane() => IsNewsPaneVisible = !IsNewsPaneVisible;
 
+    [RelayCommand]
+    private void ToggleSolarSystem() => IsSolarSystemVisible = !IsSolarSystemVisible;
 
     [RelayCommand]
     private async Task LoadCacheAsync()

@@ -21,21 +21,6 @@ public sealed class GlobeControl : Control
         public double SizeScore { get; set; }
     }
 
-    private sealed record PlanetVisual(string Code, string Name, double Distance, double Radius, Color Color, bool GasGiant = false, bool Rings = false);
-
-    private static readonly PlanetVisual[] Planets =
-    {
-        new("SUN", "Солнце", 0, 17, Color.Parse("#F4B53F")),
-        new("MERCURY", "Меркурий", 0.39, 3, Color.Parse("#9C9388")),
-        new("VENUS", "Венера", 0.72, 4.5, Color.Parse("#D5A35D")),
-        new("EARTH", "Земля", 1, 5, Color.Parse("#3B91C8")),
-        new("MARS", "Марс", 1.52, 3.8, Color.Parse("#C96545")),
-        new("JUPITER", "Юпитер", 5.2, 11, Color.Parse("#C9A47D"), true),
-        new("SATURN", "Сатурн", 9.58, 9.5, Color.Parse("#D7B878"), true, true),
-        new("URANUS", "Уран", 19.2, 6.7, Color.Parse("#79C4CE"), true),
-        new("NEPTUNE", "Нептун", 30.1, 6.5, Color.Parse("#4778C9"), true)
-    };
-
     private readonly List<CountryShape> _countries = new();
     private readonly Bitmap? _moonTexture;
     private readonly (double X, double Y, double Size, byte Alpha)[] _stars;
@@ -159,11 +144,6 @@ public sealed class GlobeControl : Control
     public override void Render(DrawingContext context)
     {
         DrawStars(context);
-        if (_zoom <= 0.78)
-        {
-            RenderSolarSystem(context);
-            return;
-        }
         GetSceneGeometry(out var center, out var radius, out var moonCenter, out var moonRadius, out var moonOrbit);
         context.DrawEllipse(new SolidColorBrush(Color.Parse("#142B3A")), new Pen(new SolidColorBrush(Color.Parse("#78A7A9")), 2), center, radius, radius);
 
@@ -193,68 +173,6 @@ public sealed class GlobeControl : Control
         DrawGlobeGrid(context, center, radius);
         context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.Parse("#A7C4B2")), 1.1), center, radius, radius);
         DrawMoon(context, center, radius, moonCenter, moonRadius, moonOrbit);
-    }
-
-    private void RenderSolarSystem(DrawingContext context)
-    {
-        var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
-        var systemRadius = Math.Min(Bounds.Width, Bounds.Height) * 0.45;
-        var systemZoom = Math.Clamp(1 + (0.78 - _zoom) * 1.5, 1, 1.12);
-        var scale = systemRadius * systemZoom / 30.1;
-        DrawPlanet(context, Planets[0], center, Planets[0].Radius * systemZoom);
-        foreach (var planet in Planets.Skip(1))
-        {
-            var orbit = planet.Distance * scale;
-            context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.FromArgb(78, 125, 160, 190)), 0.7), center, orbit, orbit * 0.52);
-            var angle = _yaw + planet.Distance * 0.31;
-            var point = new Point(center.X + Math.Cos(angle) * orbit, center.Y + Math.Sin(angle) * orbit * 0.52);
-            DrawPlanet(context, planet, point, Math.Max(3, planet.Radius * Math.Pow(systemZoom, 0.3)));
-            if (planet.Code == "EARTH")
-            {
-                var moonPoint = new Point(point.X + Math.Cos(_moonAngle) * 14, point.Y + Math.Sin(_moonAngle) * 7);
-                DrawPlanet(context, new PlanetVisual("MOON", "Луна", 0, 2.2, Color.Parse("#BFC4C6")), moonPoint, 3.1);
-            }
-        }
-    }
-
-    private void DrawPlanet(DrawingContext context, PlanetVisual planet, Point center, double radius)
-    {
-        if (planet.Rings)
-            context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.FromArgb(190, 218, 193, 128)), Math.Max(1.5, radius * 0.3)), center, radius * 1.8, radius * 0.55);
-        context.DrawEllipse(new SolidColorBrush(planet.Color), new Pen(new SolidColorBrush(Color.FromArgb(215, 238, 245, 250)), Math.Max(0.7, radius * 0.08)), center, radius, radius);
-        if (planet.Code == "EARTH")
-        {
-            context.DrawEllipse(new SolidColorBrush(Color.FromArgb(170, 87, 166, 91)), null, new Point(center.X - radius * 0.2, center.Y - radius * 0.1), radius * 0.42, radius * 0.22);
-            context.DrawEllipse(new SolidColorBrush(Color.FromArgb(145, 94, 181, 102)), null, new Point(center.X + radius * 0.25, center.Y + radius * 0.2), radius * 0.22, radius * 0.15);
-        }
-        else if (planet.GasGiant)
-        {
-            for (var i = -2; i <= 2; i++)
-                context.DrawLine(new Pen(new SolidColorBrush(Color.FromArgb(58, 255, 245, 220)), Math.Max(0.5, radius * 0.08)), new Point(center.X - radius * 0.85, center.Y + i * radius * 0.27), new Point(center.X + radius * 0.85, center.Y + i * radius * 0.27));
-        }
-        else if (planet.Code != "SUN")
-            context.DrawEllipse(new SolidColorBrush(Color.FromArgb(55, 35, 35, 35)), null, new Point(center.X + radius * 0.22, center.Y + radius * 0.12), radius * 0.2, radius * 0.13);
-        var text = new FormattedText(planet.Name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 10, Brushes.White);
-        context.DrawText(text, new Point(center.X - text.Width / 2, center.Y + radius + 5));
-    }
-
-    private string? HitTestSolarSystem(Point point)
-    {
-        var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
-        var systemRadius = Math.Min(Bounds.Width, Bounds.Height) * 0.45;
-        var scale = systemRadius * Math.Clamp(1 + (0.78 - _zoom) * 1.5, 1, 1.12) / 30.1;
-        var sunDelta = point - center;
-        if (Math.Sqrt(sunDelta.X * sunDelta.X + sunDelta.Y * sunDelta.Y) < 25) return "SUN";
-        foreach (var planet in Planets.Skip(1).Reverse())
-        {
-            var orbit = planet.Distance * scale;
-            var angle = _yaw + planet.Distance * 0.31;
-            var bodyPoint = new Point(center.X + Math.Cos(angle) * orbit, center.Y + Math.Sin(angle) * orbit * 0.52);
-            var radius = Math.Max(3, planet.Radius);
-            var delta = point - bodyPoint;
-            if (Math.Sqrt(delta.X * delta.X + delta.Y * delta.Y) <= radius + 8) return planet.Code;
-        }
-        return null;
     }
 
     private static (double X, double Y, double Size, byte Alpha)[] CreateStars()
@@ -504,7 +422,7 @@ public sealed class GlobeControl : Control
                 var code = HitTestCountry(e.GetPosition(this)) ?? "WORLD";
                 SelectedCountryCode = code;
                 SetFocus(code == "MOON");
-                SelectedCountryName = PlanetName(code) ?? code switch
+                SelectedCountryName = code switch
                 {
                     "WORLD" => "Мир",
                     "MOON" => "Луна",
@@ -528,8 +446,6 @@ public sealed class GlobeControl : Control
 
     private string? HitTestCountry(Point screenPoint)
     {
-        if (_zoom <= 0.78)
-            return HitTestSolarSystem(screenPoint);
         GetSceneGeometry(out var center, out var radius, out var moonCenter, out var moonRadius, out _);
         var moonDistance = screenPoint - moonCenter;
         if (Math.Sqrt(moonDistance.X * moonDistance.X + moonDistance.Y * moonDistance.Y) <= moonRadius)
@@ -551,9 +467,6 @@ public sealed class GlobeControl : Control
             if (country.Polygons.Any(polygon => PointInPolygon(longitude, latitude, polygon))) return country.Code;
         return "WORLD";
     }
-
-    private static string? PlanetName(string code) =>
-        Planets.FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase))?.Name;
 
     private static bool PointInPolygon(double x, double y, List<Point> polygon)
     {

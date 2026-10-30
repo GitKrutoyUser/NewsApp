@@ -12,23 +12,24 @@
     <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="#8B98A9"/><Setter Property="FontSize" Value="13"/></Style>
     <Style Selector="Button.country"><Setter Property="Background" Value="Transparent"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="14,11"/><Setter Property="Margin" Value="0,2"/></Style>
     <Style Selector="Button.country:pointerover"><Setter Property="Background" Value="#1B2634"/></Style>
-    <Style Selector="Border.card"><Setter Property="Background" Value="#151D28"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="18"/><Setter Property="Margin" Value="0,0,0,14"/></Style>
+    <Style Selector="Border.card"><Setter Property="Background" Value="#D9151D28"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="18"/><Setter Property="Margin" Value="0,0,0,14"/></Style>
     <Style Selector="Button.link"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#72B7FF"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="Button.articleTitle"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#F4F7FB"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="TextBlock.toolbarIcon"><Setter Property="Foreground" Value="#F6FAFF"/><Setter Property="FontSize" Value="21"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
-    <Style Selector="Border.newsPanel"><Setter Property="Background" Value="#101A26"/><Setter Property="CornerRadius" Value="18,0,0,18"/><Setter Property="BoxShadow" Value="-8 0 28 0 #33000000"/></Style>
+    <Style Selector="Border.newsPanel"><Setter Property="Background" Value="#D9101A26"/><Setter Property="CornerRadius" Value="18,0,0,18"/><Setter Property="BoxShadow" Value="-8 0 28 0 #55000000"/></Style>
     <Style Selector="Button.panelHandle"><Setter Property="Background" Value="#1A2A3D"/><Setter Property="Foreground" Value="#D9E8F5"/><Setter Property="Padding" Value="7,16"/><Setter Property="Height" Value="54"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
     <Style Selector="Button.panelHandle:pointerover"><Setter Property="Background" Value="#274564"/></Style>
     <Style Selector="Button.refreshMain"><Setter Property="Background" Value="#277FD1"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="MinWidth" Value="52"/><Setter Property="Padding" Value="14,0"/></Style>
     <Style Selector="Button.refreshMore"><Setter Property="Background" Value="#1E639F"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="Width" Value="34"/><Setter Property="Padding" Value="0"/></Style>
   </Window.Styles>
   <Grid>
+  <controls:StarfieldControl/>
   <Grid x:Name="MainLayout" ColumnSpacing="18">
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="390"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
-    <Border Grid.Column="0" Background="#111821" Padding="18" CornerRadius="0,18,18,0">
+    <Border Grid.Column="0" Background="#CC111821" Padding="18" CornerRadius="0,18,18,0">
       <Grid RowDefinitions="Auto,*,Auto,Auto,Auto">
         <StackPanel Spacing="6">
           <Button Content="◐  Лунные новости NASA" Command="{Binding SelectMoonCommand}" Background="#1A2838" Foreground="#DDEBFA" CornerRadius="8" Padding="10,8" HorizontalAlignment="Stretch"/>

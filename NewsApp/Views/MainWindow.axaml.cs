@@ -82,6 +82,11 @@ public partial class MainWindow : Window
             UpdateNewsPaneButton();
             AnimateNewsPane(_viewModel?.IsNewsPaneVisible != false);
         }
+        else if (e.PropertyName == nameof(MainWindowViewModel.SelectedCountry))
+        {
+            if (_viewModel?.SelectedCountry.Code == "MOON") Globe.FocusMoon();
+            else Globe.FocusEarth();
+        }
     }
 
     private void UpdateNewsPaneButton()

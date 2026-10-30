@@ -46,7 +46,10 @@ public sealed class NewsService
 
         try
         {
-            articlesFromApi.AddRange(await FetchLunarNewsAsync(requestToken));
+            var russianLunarNews = await FetchRussianLunarNewsAsync(requestToken);
+            articlesFromApi.AddRange(russianLunarNews.Count > 0
+                ? russianLunarNews
+                : await FetchLunarNewsAsync(requestToken));
         }
         catch (OperationCanceledException) when (requestToken.IsCancellationRequested) { }
 
@@ -60,6 +63,18 @@ public sealed class NewsService
             .ToList();
 
         return articles;
+    }
+
+    private async Task<List<NewsApiItem>> FetchRussianLunarNewsAsync(CancellationToken cancellationToken)
+    {
+        var query = Uri.EscapeDataString("лунная миссия");
+        using var response = await _httpClient.GetAsync($"{ApiUrl}&q={query}&size=20", cancellationToken);
+        if (!response.IsSuccessStatusCode) return new List<NewsApiItem>();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
+        var items = result?.Results ?? new List<NewsApiItem>();
+        foreach (var item in items) item.Country = "MOON";
+        return items;
     }
 
     private async Task<List<NewsApiItem>> FetchLunarNewsAsync(CancellationToken cancellationToken)

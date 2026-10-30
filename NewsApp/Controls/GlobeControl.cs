@@ -30,6 +30,8 @@ public sealed class GlobeControl : Control
     private double _pitch = 0.12;
     private double _zoom = 1.0;
     private double _moonAngle = -0.45;
+    private double _focusLevel;
+    private double _focusTarget;
     private readonly HashSet<string> _newCountryCodes = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherTimer _rotationTimer;
 
@@ -59,8 +61,10 @@ public sealed class GlobeControl : Control
         _rotationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _rotationTimer.Tick += (_, _) =>
         {
-            _moonAngle += 0.008;
+            _moonAngle += 0.0025;
             if (IsAutoRotating) _yaw += 0.0045;
+            _focusLevel += (_focusTarget - _focusLevel) * 0.14;
+            if (Math.Abs(_focusTarget - _focusLevel) < 0.001) _focusLevel = _focusTarget;
             InvalidateVisual();
         };
         _rotationTimer.Start();
@@ -76,6 +80,15 @@ public sealed class GlobeControl : Control
         IsAutoRotating = false;
         _rotationTimer.Stop();
     }
+
+    private void SetFocus(bool moon)
+    {
+        _focusTarget = moon ? 1 : 0;
+    }
+
+    public void FocusEarth() => SetFocus(false);
+
+    public void FocusMoon() => SetFocus(true);
 
     private void LoadGeoJson()
     {
@@ -128,8 +141,7 @@ public sealed class GlobeControl : Control
 
     public override void Render(DrawingContext context)
     {
-        var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
-        var radius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * 0.73 * _zoom);
+        GetSceneGeometry(out var center, out var radius, out var moonCenter, out var moonRadius, out var moonOrbit);
         context.DrawEllipse(new SolidColorBrush(Color.Parse("#142B3A")), new Pen(new SolidColorBrush(Color.Parse("#78A7A9")), 2), center, radius, radius);
 
         var occupiedLabels = new List<Rect>();
@@ -157,16 +169,33 @@ public sealed class GlobeControl : Control
 
         DrawGlobeGrid(context, center, radius);
         context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.Parse("#A7C4B2")), 1.1), center, radius, radius);
-        DrawMoon(context, center, radius);
+        DrawMoon(context, center, radius, moonCenter, moonRadius, moonOrbit);
     }
 
-    private void DrawMoon(DrawingContext context, Point center, double earthRadius)
+    private void GetSceneGeometry(out Point earthCenter, out double earthRadius, out Point moonCenter, out double moonRadius, out double moonOrbit)
     {
-        var orbitRadius = earthRadius * 1.28;
-        var moonCenter = new Point(
-            center.X + Math.Cos(_moonAngle) * orbitRadius,
-            center.Y + Math.Sin(_moonAngle) * orbitRadius * 0.62);
-        var moonRadius = Math.Max(16, earthRadius * 0.23);
+        var canvasCenter = new Point(Bounds.Width / 2, Bounds.Height / 2);
+        var baseRadius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * 0.62 * _zoom);
+        moonOrbit = baseRadius * 1.38;
+        var normalMoonCenter = new Point(
+            canvasCenter.X + Math.Cos(_moonAngle) * moonOrbit,
+            canvasCenter.Y + Math.Sin(_moonAngle) * moonOrbit * 0.62);
+        var direction = normalMoonCenter - canvasCenter;
+        var length = Math.Max(1, Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y));
+        var earthFocusCenter = new Point(
+            canvasCenter.X - direction.X / length * baseRadius * 1.05,
+            canvasCenter.Y - direction.Y / length * baseRadius * 1.05);
+        earthCenter = Lerp(canvasCenter, earthFocusCenter, _focusLevel);
+        moonCenter = Lerp(normalMoonCenter, canvasCenter, _focusLevel);
+        earthRadius = baseRadius * (1 - _focusLevel * 0.48);
+        moonRadius = Math.Max(18, baseRadius * (0.23 + _focusLevel * 0.42));
+    }
+
+    private static Point Lerp(Point first, Point second, double amount) =>
+        new(first.X + (second.X - first.X) * amount, first.Y + (second.Y - first.Y) * amount);
+
+    private void DrawMoon(DrawingContext context, Point center, double earthRadius, Point moonCenter, double moonRadius, double orbitRadius)
+    {
         var moonRect = new Rect(moonCenter.X - moonRadius, moonCenter.Y - moonRadius, moonRadius * 2, moonRadius * 2);
         var moonPen = new Pen(new SolidColorBrush(Color.Parse("#E4E8E8")), Math.Max(1, earthRadius * 0.009));
         context.DrawEllipse(null, new Pen(new SolidColorBrush(Color.FromArgb(70, 170, 190, 205)), 0.7),
@@ -195,7 +224,7 @@ public sealed class GlobeControl : Control
         var textureWidth = _moonTexture.PixelSize.Width;
         var textureHeight = _moonTexture.PixelSize.Height;
         var sourceWidth = Math.Min(textureWidth, textureHeight);
-        var offset = ((_yaw + _moonAngle) / (Math.PI * 2) * textureWidth) % textureWidth;
+        var offset = (_moonAngle / (Math.PI * 2) * textureWidth) % textureWidth;
         if (offset < 0) offset += textureWidth;
         var firstWidth = Math.Min(sourceWidth, textureWidth - offset);
         var firstDestinationWidth = destination.Width * firstWidth / sourceWidth;
@@ -369,6 +398,7 @@ public sealed class GlobeControl : Control
             {
                 var code = HitTestCountry(e.GetPosition(this)) ?? "WORLD";
                 SelectedCountryCode = code;
+                SetFocus(code == "MOON");
                 SelectedCountryName = code switch
                 {
                     "WORLD" => "Мир",
@@ -393,14 +423,9 @@ public sealed class GlobeControl : Control
 
     private string? HitTestCountry(Point screenPoint)
     {
-        var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
-        var radius = Math.Max(10, (Math.Min(Bounds.Width, Bounds.Height) / 2 - 12) * 0.73 * _zoom);
-        var moonOrbit = radius * 1.28;
-        var moonCenter = new Point(
-            center.X + Math.Cos(_moonAngle) * moonOrbit,
-            center.Y + Math.Sin(_moonAngle) * moonOrbit * 0.62);
+        GetSceneGeometry(out var center, out var radius, out var moonCenter, out var moonRadius, out _);
         var moonDistance = screenPoint - moonCenter;
-        if (Math.Sqrt(moonDistance.X * moonDistance.X + moonDistance.Y * moonDistance.Y) <= radius * 0.23)
+        if (Math.Sqrt(moonDistance.X * moonDistance.X + moonDistance.Y * moonDistance.Y) <= moonRadius)
             return "MOON";
         var nx = (screenPoint.X - center.X) / radius;
         var ny = -(screenPoint.Y - center.Y) / radius;

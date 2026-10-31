@@ -7,37 +7,38 @@
         x:DataType="vm:MainWindowViewModel"
         KeyDown="OnWindowKeyDown"
         Width="1440" Height="880" MinWidth="1100" MinHeight="680"
-        Background="#040811" Title="Глобус с новостями">
+        Background="#03060D" Title="Глобус с новостями">
   <Window.Styles>
-    <Style Selector="TextBlock.title"><Setter Property="FontSize" Value="30"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="#F4F7FB"/></Style>
-    <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="#AAB8CA"/><Setter Property="FontSize" Value="13"/></Style>
+    <Style Selector="TextBlock.title"><Setter Property="FontSize" Value="30"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="#F7FAFF"/></Style>
+    <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="#A8B8CC"/><Setter Property="FontSize" Value="13"/></Style>
     <Style Selector="Button.country"><Setter Property="Background" Value="Transparent"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="14,11"/><Setter Property="Margin" Value="0,2"/></Style>
-    <Style Selector="Button.country:pointerover"><Setter Property="Background" Value="#331B3853"/></Style>
-    <Style Selector="Border.card"><Setter Property="Background" Value="#E00D1622"/><Setter Property="BorderBrush" Value="#AA314459"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="16,16,16,10"/><Setter Property="Margin" Value="0"/></Style>
-    <Style Selector="Button.link"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#8BC7FF"/><Setter Property="Padding" Value="0"/></Style>
+    <Style Selector="Button.country:pointerover"><Setter Property="Background" Value="#442D5C82"/></Style>
+    <Style Selector="Border.card"><Setter Property="Background" Value="#B8141E2D"/><Setter Property="BorderBrush" Value="#665F82A2"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="18"/><Setter Property="Padding" Value="16,16,16,10"/><Setter Property="Margin" Value="0,0,0,12"/><Setter Property="BoxShadow" Value="0 8 24 0 #55000000"/></Style>
+    <Style Selector="Border.card:pointerover"><Setter Property="Background" Value="#CC19283A"/><Setter Property="BorderBrush" Value="#AA83C9F5"/></Style>
+    <Style Selector="Button.link"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#8ECFFF"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="Button.articleTitle"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#F4F7FB"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="TextBlock.toolbarIcon"><Setter Property="Foreground" Value="#F6FAFF"/><Setter Property="FontSize" Value="21"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
-    <Style Selector="Border.newsPanel"><Setter Property="Background" Value="#E6101926"/><Setter Property="CornerRadius" Value="20,0,0,20"/><Setter Property="BoxShadow" Value="-10 0 35 0 #88000000"/></Style>
-    <Style Selector="Button.panelHandle"><Setter Property="Background" Value="#CC1A4164"/><Setter Property="Foreground" Value="#EAF5FF"/><Setter Property="Padding" Value="7,16"/><Setter Property="Height" Value="54"/><Setter Property="Width" Value="52"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
-    <Style Selector="Button.panelHandle:pointerover"><Setter Property="Background" Value="#EE2B6595"/></Style>
-    <Style Selector="Button.refreshMain"><Setter Property="Background" Value="#CC277FD1"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="MinWidth" Value="52"/><Setter Property="Padding" Value="14,0"/></Style>
-    <Style Selector="Button.refreshMore"><Setter Property="Background" Value="#CC1E639F"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="Width" Value="34"/><Setter Property="Padding" Value="0"/></Style>
+    <Style Selector="Border.newsPanel"><Setter Property="Background" Value="#D90B1422"/><Setter Property="BorderBrush" Value="#805E7898"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="24,0,0,24"/><Setter Property="BoxShadow" Value="-16 0 50 0 #AA000000"/></Style>
+    <Style Selector="Button.panelHandle"><Setter Property="Background" Value="#B51A2B43"/><Setter Property="BorderBrush" Value="#886A9CC0"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="#EAF5FF"/><Setter Property="Padding" Value="7,16"/><Setter Property="Height" Value="58"/><Setter Property="Width" Value="52"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+    <Style Selector="Button.panelHandle:pointerover"><Setter Property="Background" Value="#DD2A5B85"/><Setter Property="BorderBrush" Value="#CC9EDBFF"/></Style>
+    <Style Selector="Button.refreshMain"><Setter Property="Background" Value="#C42A75B8"/><Setter Property="BorderBrush" Value="#887FBEE8"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="MinWidth" Value="52"/><Setter Property="Padding" Value="14,0"/></Style>
+    <Style Selector="Button.refreshMore"><Setter Property="Background" Value="#B51D5687"/><Setter Property="BorderBrush" Value="#887FBEE8"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="Width" Value="34"/><Setter Property="Padding" Value="0"/></Style>
   </Window.Styles>
   <Grid x:Name="MainLayout">
     <controls:StarfieldControl/>
     <controls:GlobeControl x:Name="Globe" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="18"/>
     <controls:StarfieldControl DrawBackground="False" Opacity="0.28"/>
 
-    <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="28,0,0,28" Background="#88101929" CornerRadius="16" Padding="16,10">
+    <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="28,0,0,28" Background="#99101929" BorderBrush="#665D7896" BorderThickness="1" CornerRadius="18" Padding="16,10" BoxShadow="0 10 28 0 #77000000">
       <StackPanel Spacing="7">
         <TextBlock Text="{Binding SelectedCountry.DisplayName}" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Foreground="#F4F7FB"/>
-        <Button x:Name="AutoRotationButton" ToolTip.Tip="Автоповорот глобуса" Click="OnAutoRotationClick" HorizontalAlignment="Center" Padding="14,8" Background="#CC1B4F7A" Foreground="White" CornerRadius="7">
+          <Button x:Name="AutoRotationButton" ToolTip.Tip="Автоповорот глобуса" Click="OnAutoRotationClick" HorizontalAlignment="Center" Padding="14,8" Background="#C41B4F7A" BorderBrush="#887FBEE8" BorderThickness="1" Foreground="White" CornerRadius="9">
           <TextBlock Classes="toolbarIcon" Text="▶"/>
         </Button>
       </StackPanel>
     </Border>
 
-    <Border x:Name="NewsPanel" Classes="newsPanel" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,18,26,18" Width="720">
+    <Border x:Name="NewsPanel" Classes="newsPanel" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,20,24,20" Width="720">
       <Grid ColumnDefinitions="Auto,*">
         <Button x:Name="NewsPaneToggleButton" Grid.Column="0" Classes="panelHandle" Command="{Binding ToggleNewsPaneCommand}" ToolTip.Tip="Показать или скрыть новости" CornerRadius="10" Margin="-1,0,10,0">
           <TextBlock Text="&lt;" FontSize="22" FontWeight="SemiBold"/>
@@ -84,7 +85,7 @@
                           <StackPanel Orientation="Horizontal" Spacing="14"><Button Content="Читать в приложении →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/><Button Content="Читать на сайте ↗" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleInBrowserCommand}" CommandParameter="{Binding}"/></StackPanel>
                         </StackPanel>
                       </StackPanel>
-                      <Border Grid.Column="1" IsVisible="{Binding HasImage}" Background="#33101A25" BorderBrush="#AA3D5870" BorderThickness="1" CornerRadius="10" ClipToBounds="True" VerticalAlignment="Top"><Image Source="{Binding ImageBitmap}" Stretch="UniformToFill" Width="190" Height="140" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
+                      <Border Grid.Column="1" IsVisible="{Binding HasImage}" Background="#44101A25" BorderBrush="#AA6887A5" BorderThickness="1" CornerRadius="12" ClipToBounds="True" VerticalAlignment="Top"><Image Source="{Binding ImageBitmap}" Stretch="UniformToFill" Width="190" Height="140" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
                     </Grid>
                   </Border>
                 </DataTemplate>

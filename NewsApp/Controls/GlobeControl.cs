@@ -177,7 +177,7 @@ public sealed class GlobeControl : Control
                 var label = Project(country.LabelPoint.X, country.LabelPoint.Y, center, radius);
                 if (label is not null && radius > 130 && ShouldShowLabel(country))
                 {
-                    var textSize = country.SizeScore >= 1400 ? 15 : country.SizeScore >= 700 ? 13 : country.SizeScore >= 220 ? 11 : 9;
+                    var textSize = IsMajorLabelCountry(country) ? 15 : country.SizeScore >= 700 ? 13 : country.SizeScore >= 220 ? 11 : 9;
                     var text = new FormattedText(country.Name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, textSize, Brushes.White);
                     var textRect = new Rect(label.Value.X - text.Width / 2 - 3, label.Value.Y - text.Height / 2 - 2, text.Width + 6, text.Height + 4);
                     if (!occupiedLabels.Any(existing => existing.Intersects(textRect)))
@@ -347,9 +347,13 @@ public sealed class GlobeControl : Control
 
     private bool ShouldShowLabel(CountryShape country)
     {
-        var minimumSize = _zoom < 0.85 ? 1100 : _zoom < 1.25 ? 250 : 18;
+        if (_zoom < 0.85) return IsMajorLabelCountry(country) || country.SizeScore >= 1100;
+        var minimumSize = _zoom < 1.25 ? 250 : 18;
         return country.SizeScore >= minimumSize;
     }
+
+    private static bool IsMajorLabelCountry(CountryShape country) => country.Code.ToUpperInvariant() is
+        "RU" or "CN" or "US" or "AU" or "IN" or "KZ" or "BR";
 
     private static double PolygonAreaScore(List<Point> polygon)
     {

@@ -32,7 +32,7 @@
       <StackPanel Spacing="7">
         <TextBlock Text="{Binding SelectedCountry.DisplayName}" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Foreground="#F4F7FB"/>
           <Button x:Name="AutoRotationButton" ToolTip.Tip="Автоповорот глобуса" Click="OnAutoRotationClick" HorizontalAlignment="Center" Padding="14,8" Background="#C41B4F7A" BorderBrush="#887FBEE8" BorderThickness="1" Foreground="White" CornerRadius="9">
-          <TextBlock Classes="toolbarIcon" Text="▶"/>
+          <PathIcon Data="M 7,5 L 18,12 L 7,19 Z" Width="20" Height="20" Foreground="#F6FAFF"/>
         </Button>
       </StackPanel>
     </Border>
@@ -40,7 +40,7 @@
     <Border x:Name="NewsPanel" Classes="newsPanel" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,20,24,20" Width="720">
       <Grid ColumnDefinitions="Auto,*">
         <Button x:Name="NewsPaneToggleButton" Grid.Column="0" Classes="panelHandle" Command="{Binding ToggleNewsPaneCommand}" ToolTip.Tip="Показать или скрыть новости" CornerRadius="10" Margin="-1,0,10,0">
-          <TextBlock Text="&lt;" FontSize="22" FontWeight="SemiBold"/>
+          <PathIcon Data="M 15,5 L 8,12 L 15,19" Width="20" Height="20" Foreground="#EAF5FF"/>
         </Button>
         <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="0,12,12,12" IsVisible="{Binding IsNewsPaneVisible}">
           <Grid ColumnDefinitions="*,Auto">
@@ -53,7 +53,7 @@
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="0" VerticalAlignment="Top">
               <Button x:Name="RefreshButton" Classes="refreshMain" Command="{Binding RefreshCommand}" ToolTip.Tip="Обновить через API" CornerRadius="9,0,0,9" IsEnabled="{Binding !IsRefreshing}">
-                <TextBlock x:Name="RefreshIcon" Classes="toolbarIcon" Text="⟳"/>
+                <PathIcon x:Name="RefreshIcon" Data="M 20,11 A 8,8 0 1 0 18,16 M 20,11 L 20,5 M 20,11 L 14,11" Width="20" Height="20" Foreground="#F6FAFF"/>
               </Button>
               <Button Classes="refreshMore" ToolTip.Tip="Выбрать способ обновления" CornerRadius="0,9,9,0" IsEnabled="{Binding !IsRefreshing}">
                 <TextBlock Text="⌄" FontSize="17" FontWeight="Bold"/>
@@ -93,8 +93,8 @@
           </ScrollViewer>
           <Grid Grid.Row="2" IsVisible="{Binding IsReadingArticle}" ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <StackPanel Spacing="10" VerticalAlignment="Top">
-              <Button ToolTip.Tip="Назад к новостям" Command="{Binding CloseArticleCommand}" Padding="12,9"><TextBlock Classes="toolbarIcon" Text="←"/></Button>
-              <Button ToolTip.Tip="В начало статьи" Click="OnArticleScrollToTop" Padding="12,9"><TextBlock Classes="toolbarIcon" Text="↑"/></Button>
+              <Button ToolTip.Tip="Назад к новостям" Command="{Binding CloseArticleCommand}" Padding="12,9"><PathIcon Data="M 19,12 L 5,12 M 5,12 L 11,6 M 5,12 L 11,18" Width="20" Height="20" Foreground="#EAF5FF"/></Button>
+              <Button ToolTip.Tip="В начало статьи" Click="OnArticleScrollToTop" Padding="12,9"><PathIcon Data="M 12,19 L 12,5 M 12,5 L 6,11 M 12,5 L 18,11" Width="20" Height="20" Foreground="#EAF5FF"/></Button>
             </StackPanel>
             <ScrollViewer x:Name="ArticleScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto">
               <Border Background="#D90E1827" BorderBrush="#806482A0" BorderThickness="1" CornerRadius="20" Padding="28" HorizontalAlignment="Center" MaxWidth="900" BoxShadow="0 12 36 0 #88000000">

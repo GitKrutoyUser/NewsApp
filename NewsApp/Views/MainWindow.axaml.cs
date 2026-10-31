@@ -92,12 +92,9 @@ public partial class MainWindow : Window
 
     private void UpdateNewsPaneButton()
     {
-        NewsPaneToggleButton.Content = new TextBlock
-        {
-            Text = _viewModel?.IsNewsPaneVisible == false ? ">" : "<",
-            FontSize = 22,
-            FontWeight = FontWeight.SemiBold
-        };
+        NewsPaneToggleButton.Content = CreateIcon(_viewModel?.IsNewsPaneVisible == false
+            ? "M 9,5 L 16,12 L 9,19"
+            : "M 15,5 L 8,12 L 15,19");
     }
 
     private void AnimateNewsPane(bool visible)
@@ -170,12 +167,18 @@ public partial class MainWindow : Window
     private void OnAutoRotationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         Globe.ToggleAutoRotation();
-        AutoRotationButton.Content = new TextBlock
-        {
-            Text = Globe.IsAutoRotating ? "■" : "▶",
-            Classes = { "toolbarIcon" }
-        };
+        AutoRotationButton.Content = CreateIcon(Globe.IsAutoRotating
+            ? "M 6,6 H 18 V 18 H 6 Z"
+            : "M 7,5 L 18,12 L 7,19 Z");
     }
+
+    private static PathIcon CreateIcon(string data) => new()
+    {
+        Data = StreamGeometry.Parse(data),
+        Width = 20,
+        Height = 20,
+        Foreground = Brushes.White
+    };
 
     private void OnArticleScrollToTop(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {

@@ -352,39 +352,46 @@ public sealed class GlobeControl : Control
 
     private void DrawPolygon(DrawingContext context, List<Point> polygon, Point center, double radius, IBrush fill, Pen pen)
     {
-        var visiblePart = new List<Point>();
+        var projected = new List<Point?>();
+        var crossesDateLine = false;
         for (var index = 0; index < polygon.Count; index++)
         {
             var current = polygon[index];
             var previous = polygon[(index + polygon.Count - 1) % polygon.Count];
-
-            // Не соединяем противоположные стороны карты через линию смены дат.
-            if (Math.Abs(current.X - previous.X) > 180)
-                DrawVisiblePolygonPart(context, visiblePart, fill, pen);
-
-            var projected = Project(current.X, current.Y, center, radius);
-            if (projected is null)
-            {
-                // Невидимая часть находится за поверхностью шара. Ее нельзя
-                // соединять с видимой частью прямой линией.
-                DrawVisiblePolygonPart(context, visiblePart, fill, pen);
-                continue;
-            }
-
-            visiblePart.Add(projected.Value);
+            if (Math.Abs(current.X - previous.X) > 180) crossesDateLine = true;
+            projected.Add(Project(current.X, current.Y, center, radius));
         }
 
-        DrawVisiblePolygonPart(context, visiblePart, fill, pen);
-    }
-
-    private static void DrawVisiblePolygonPart(DrawingContext context, List<Point> points, IBrush fill, Pen pen)
-    {
-        if (points.Count < 3)
+        // Заполняем только цельный контур, полностью находящийся на передней
+        // полусфере. Это не позволяет заливке перескочить через горизонт.
+        if (!crossesDateLine && projected.All(point => point is not null))
         {
-            points.Clear();
+            DrawClosedPolygon(context, projected.Select(point => point!.Value).ToList(), fill, pen);
             return;
         }
 
+        // На горизонте оставляем только реальные видимые линии. Заполнять
+        // неполный контур нельзя: Avalonia замкнула бы его ложной диагональю.
+        var visiblePart = new List<Point>();
+        for (var index = 0; index < projected.Count; index++)
+        {
+            var previous = polygon[(index + projected.Count - 1) % projected.Count];
+            if (Math.Abs(polygon[index].X - previous.X) > 180 || projected[index] is null)
+            {
+                DrawVisibleLinePart(context, visiblePart, pen);
+                continue;
+            }
+
+            var point = projected[index]!.Value;
+            if (visiblePart.Count > 0 && Distance(visiblePart[^1], point) > radius * 0.24)
+                DrawVisibleLinePart(context, visiblePart, pen);
+            visiblePart.Add(point);
+        }
+        DrawVisibleLinePart(context, visiblePart, pen);
+    }
+
+    private static void DrawClosedPolygon(DrawingContext context, List<Point> points, IBrush fill, Pen pen)
+    {
         var geometry = new StreamGeometry();
         using (var builder = geometry.Open())
         {
@@ -393,7 +400,29 @@ public sealed class GlobeControl : Control
             builder.EndFigure(true);
         }
         context.DrawGeometry(fill, pen, geometry);
+    }
+
+    private static void DrawVisibleLinePart(DrawingContext context, List<Point> points, Pen pen)
+    {
+        if (points.Count >= 2)
+        {
+            var geometry = new StreamGeometry();
+            using (var builder = geometry.Open())
+            {
+                builder.BeginFigure(points[0], false);
+                foreach (var point in points.Skip(1)) builder.LineTo(point);
+                builder.EndFigure(false);
+            }
+            context.DrawGeometry(null, pen, geometry);
+        }
         points.Clear();
+    }
+
+    private static double Distance(Point first, Point second)
+    {
+        var dx = first.X - second.X;
+        var dy = first.Y - second.Y;
+        return Math.Sqrt(dx * dx + dy * dy);
     }
 
     private Point? Project(double longitude, double latitude, Point center, double radius)

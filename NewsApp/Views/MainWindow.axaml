@@ -13,7 +13,7 @@
     <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="#AAB8CA"/><Setter Property="FontSize" Value="13"/></Style>
     <Style Selector="Button.country"><Setter Property="Background" Value="Transparent"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="14,11"/><Setter Property="Margin" Value="0,2"/></Style>
     <Style Selector="Button.country:pointerover"><Setter Property="Background" Value="#331B3853"/></Style>
-    <Style Selector="Border.card"><Setter Property="Background" Value="#CC151D28"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="18"/><Setter Property="Margin" Value="0,0,0,14"/></Style>
+    <Style Selector="Border.card"><Setter Property="Background" Value="#E00D1622"/><Setter Property="BorderBrush" Value="#AA314459"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="16,16,16,10"/><Setter Property="Margin" Value="0"/></Style>
     <Style Selector="Button.link"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#8BC7FF"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="Button.articleTitle"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#F4F7FB"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="TextBlock.toolbarIcon"><Setter Property="Foreground" Value="#F6FAFF"/><Setter Property="FontSize" Value="21"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
@@ -84,7 +84,7 @@
                           <StackPanel Orientation="Horizontal" Spacing="14"><Button Content="Читать в приложении →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/><Button Content="Читать на сайте ↗" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleInBrowserCommand}" CommandParameter="{Binding}"/></StackPanel>
                         </StackPanel>
                       </StackPanel>
-                      <Border Grid.Column="1" Background="#66202B39" CornerRadius="10" ClipToBounds="True"><Image Source="{Binding ImageBitmap}" Stretch="UniformToFill" Width="190" Height="140" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
+                      <Border Grid.Column="1" IsVisible="{Binding HasImage}" Background="#33101A25" BorderBrush="#AA3D5870" BorderThickness="1" CornerRadius="10" ClipToBounds="True" VerticalAlignment="Top"><Image Source="{Binding ImageBitmap}" Stretch="UniformToFill" Width="190" Height="140" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
                     </Grid>
                   </Border>
                 </DataTemplate>

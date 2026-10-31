@@ -18,6 +18,8 @@ public partial class NewsArticle : ObservableObject
 
     [ObservableProperty]
     private Bitmap? _imageBitmap;
+    public bool HasImage => ImageBitmap is not null;
+    partial void OnImageBitmapChanged(Bitmap? value) => OnPropertyChanged(nameof(HasImage));
 }
 
 public partial class Country : ObservableObject

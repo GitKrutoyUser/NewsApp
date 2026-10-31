@@ -83,7 +83,7 @@
                           <StackPanel Orientation="Horizontal" Spacing="14"><Button Content="Читать в приложении →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/><Button Content="Читать на сайте ↗" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleInBrowserCommand}" CommandParameter="{Binding}"/></StackPanel>
                         </StackPanel>
                       </StackPanel>
-                      <Border Grid.Column="1" Background="#66202B39" CornerRadius="10" ClipToBounds="True"><Image Source="{Binding ImageBitmap}" Stretch="Uniform" Width="190" Height="180" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                      <Border Grid.Column="1" Background="#66202B39" CornerRadius="10" ClipToBounds="True"><Image Source="{Binding ImageBitmap}" Stretch="UniformToFill" Width="190" Height="140" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
                     </Grid>
                   </Border>
                 </DataTemplate>

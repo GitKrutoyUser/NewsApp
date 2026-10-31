@@ -140,7 +140,7 @@ public partial class MainWindow : Window
     }
 
     private double ExpandedNewsWidth() =>
-        Math.Clamp(MainLayout.Bounds.Width * 0.50, 500, 820);
+        Math.Max(480, Math.Round(MainLayout.Bounds.Width * 0.50));
 
     private void SetPaneLayout(bool visible, bool animate)
     {

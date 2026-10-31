@@ -12,6 +12,8 @@ namespace NewsApp.Controls;
 
 public sealed class GlobeControl : Control
 {
+    private readonly record struct GlobePoint(double X, double Y, double Z);
+
     private sealed class CountryShape
     {
         public string Code { get; init; } = "";
@@ -352,43 +354,53 @@ public sealed class GlobeControl : Control
 
     private void DrawPolygon(DrawingContext context, List<Point> polygon, Point center, double radius, IBrush fill, Pen pen)
     {
-        var projected = new List<Point?>();
-        var crossesDateLine = false;
-        for (var index = 0; index < polygon.Count; index++)
+        var rotated = polygon.Select(ToRotatedPoint).ToList();
+        var clipped = new List<GlobePoint>();
+        for (var index = 0; index < rotated.Count; index++)
         {
-            var current = polygon[index];
-            var previous = polygon[(index + polygon.Count - 1) % polygon.Count];
-            if (Math.Abs(current.X - previous.X) > 180) crossesDateLine = true;
-            projected.Add(Project(current.X, current.Y, center, radius));
-        }
+            var previous = rotated[(index + rotated.Count - 1) % rotated.Count];
+            var current = rotated[index];
+            var previousVisible = previous.Z >= -0.02;
+            var currentVisible = current.Z >= -0.02;
 
-        // Заполняем только цельный контур, полностью находящийся на передней
-        // полусфере. Это не позволяет заливке перескочить через горизонт.
-        if (!crossesDateLine && projected.All(point => point is not null))
-        {
-            DrawClosedPolygon(context, projected.Select(point => point!.Value).ToList(), fill, pen);
-            return;
-        }
-
-        // На горизонте оставляем только реальные видимые линии. Заполнять
-        // неполный контур нельзя: Avalonia замкнула бы его ложной диагональю.
-        var visiblePart = new List<Point>();
-        for (var index = 0; index < projected.Count; index++)
-        {
-            var previous = polygon[(index + projected.Count - 1) % projected.Count];
-            if (Math.Abs(polygon[index].X - previous.X) > 180 || projected[index] is null)
+            if (previousVisible != currentVisible)
             {
-                DrawVisibleLinePart(context, visiblePart, pen);
-                continue;
+                var denominator = current.Z - previous.Z;
+                if (Math.Abs(denominator) > 0.000001)
+                {
+                    var amount = (-0.02 - previous.Z) / denominator;
+                    clipped.Add(Lerp(previous, current, amount));
+                }
             }
 
-            var point = projected[index]!.Value;
-            if (visiblePart.Count > 0 && Distance(visiblePart[^1], point) > radius * 0.24)
-                DrawVisibleLinePart(context, visiblePart, pen);
-            visiblePart.Add(point);
+            if (currentVisible) clipped.Add(current);
         }
-        DrawVisibleLinePart(context, visiblePart, pen);
+
+        var projected = clipped
+            .Select(point => new Point(center.X + point.X * radius, center.Y - point.Y * radius))
+            .ToList();
+        if (projected.Count < 3) return;
+        DrawClosedPolygon(context, projected, fill, pen);
     }
+
+    private GlobePoint ToRotatedPoint(Point coordinate)
+    {
+        var longitude = coordinate.X * Math.PI / 180;
+        var latitude = coordinate.Y * Math.PI / 180;
+        var x = Math.Cos(latitude) * Math.Cos(longitude);
+        var y = Math.Sin(latitude);
+        var z = Math.Cos(latitude) * Math.Sin(longitude);
+        var x1 = x * Math.Cos(_yaw) - z * Math.Sin(_yaw);
+        var z1 = x * Math.Sin(_yaw) + z * Math.Cos(_yaw);
+        var y2 = y * Math.Cos(_pitch) - z1 * Math.Sin(_pitch);
+        var z2 = y * Math.Sin(_pitch) + z1 * Math.Cos(_pitch);
+        return new GlobePoint(x1, y2, z2);
+    }
+
+    private static GlobePoint Lerp(GlobePoint first, GlobePoint second, double amount) =>
+        new(first.X + (second.X - first.X) * amount,
+            first.Y + (second.Y - first.Y) * amount,
+            first.Z + (second.Z - first.Z) * amount);
 
     private static void DrawClosedPolygon(DrawingContext context, List<Point> points, IBrush fill, Pen pen)
     {
@@ -400,29 +412,6 @@ public sealed class GlobeControl : Control
             builder.EndFigure(true);
         }
         context.DrawGeometry(fill, pen, geometry);
-    }
-
-    private static void DrawVisibleLinePart(DrawingContext context, List<Point> points, Pen pen)
-    {
-        if (points.Count >= 2)
-        {
-            var geometry = new StreamGeometry();
-            using (var builder = geometry.Open())
-            {
-                builder.BeginFigure(points[0], false);
-                foreach (var point in points.Skip(1)) builder.LineTo(point);
-                builder.EndFigure(false);
-            }
-            context.DrawGeometry(null, pen, geometry);
-        }
-        points.Clear();
-    }
-
-    private static double Distance(Point first, Point second)
-    {
-        var dx = first.X - second.X;
-        var dy = first.Y - second.Y;
-        return Math.Sqrt(dx * dx + dy * dy);
     }
 
     private Point? Project(double longitude, double latitude, Point center, double radius)

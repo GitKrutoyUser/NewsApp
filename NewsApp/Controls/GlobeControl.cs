@@ -170,6 +170,7 @@ public sealed class GlobeControl : Control
             center.X - radius, center.Y - radius, radius * 2, radius * 2))))
         {
             DrawEarthSurface(context, center, radius);
+            DrawCountryBoundaries(context, center, radius);
             var occupiedLabels = new List<Rect>();
             foreach (var country in _countries.OrderByDescending(x => x.SizeScore))
             {
@@ -459,6 +460,59 @@ public sealed class GlobeControl : Control
         _earthFrameYaw = _yaw;
         _earthFramePitch = _pitch;
         context.DrawImage(_earthFrame, new Rect(0, 0, size, size), new Rect(center.X - radius, center.Y - radius, radius * 2, radius * 2));
+    }
+
+    private void DrawCountryBoundaries(DrawingContext context, Point center, double radius)
+    {
+        var normal = new StreamGeometry();
+        var selected = new StreamGeometry();
+        using (var normalBuilder = normal.Open())
+        using (var selectedBuilder = selected.Open())
+        {
+            foreach (var country in _countries)
+            {
+                var builder = country.Code.Equals(SelectedCountryCode, StringComparison.OrdinalIgnoreCase)
+                    ? selectedBuilder
+                    : normalBuilder;
+                foreach (var polygon in country.Polygons)
+                {
+                    var segment = new List<Point>();
+                    for (var index = 0; index < polygon.Count; index++)
+                    {
+                        var previousGeo = polygon[(index + polygon.Count - 1) % polygon.Count];
+                        var currentGeo = polygon[index];
+                        if (Math.Abs(currentGeo.X - previousGeo.X) > 180)
+                        {
+                            AddBoundarySegment(builder, segment);
+                            segment.Clear();
+                        }
+
+                        var projected = Project(currentGeo.X, currentGeo.Y, center, radius);
+                        if (projected is null)
+                        {
+                            AddBoundarySegment(builder, segment);
+                            segment.Clear();
+                        }
+                        else
+                        {
+                            segment.Add(projected.Value);
+                        }
+                    }
+                    AddBoundarySegment(builder, segment);
+                }
+            }
+        }
+
+        context.DrawGeometry(null, new Pen(new SolidColorBrush(Color.Parse("#B8C9AE")), 0.85), normal);
+        context.DrawGeometry(null, new Pen(new SolidColorBrush(Color.Parse("#F5B642")), 2.1), selected);
+    }
+
+    private static void AddBoundarySegment(StreamGeometryContext builder, List<Point> points)
+    {
+        if (points.Count < 2) return;
+        builder.BeginFigure(points[0], false);
+        foreach (var point in points.Skip(1)) builder.LineTo(point);
+        builder.EndFigure(false);
     }
 
     private Point? Project(double longitude, double latitude, Point center, double radius)

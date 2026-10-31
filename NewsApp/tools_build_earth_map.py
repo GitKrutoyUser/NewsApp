@@ -4,7 +4,6 @@ from PIL import Image, ImageDraw
 
 W, H = 2048, 1024
 water = (20, 43, 58, 255)
-border = (184, 201, 174, 255)
 image = Image.new('RGBA', (W, H), water)
 draw = ImageDraw.Draw(image)
 geo = json.load(open('Assets/countries.geojson', encoding='utf-8'))
@@ -40,21 +39,16 @@ def unwrap(ring):
         out.append((lon,float(lat))); prev=lon
     return out
 
-def wrapped_points(ring):
-    p=unwrap(ring)
-    return [[xy(lon+s,lat) for lon,lat in p] for s in (-360,0,360)]
-
-def draw_ring(ring, fill=None, outline=None, width=1):
-    for pts in wrapped_points(ring):
-        draw.polygon(pts, fill=fill)
-        if outline: draw.line(pts+[pts[0]], fill=outline, width=width, joint='curve')
+def draw_ring(ring, fill):
+    pts=unwrap(ring)
+    for shift in (-360,0,360): draw.polygon([xy(lon+shift,lat) for lon,lat in pts], fill=fill)
 
 for feature in geo['features']:
     props=feature['properties']; g=feature['geometry']; code=code_of(props); polys=[g['coordinates']] if g['type']=='Polygon' else g['coordinates']
     for rings in polys:
         if not rings: continue
-        draw_ring(rings[0], fill=country_color(g,code), outline=border, width=2)
-        for hole in rings[1:]: draw_ring(hole, fill=water, outline=border, width=2)
+        draw_ring(rings[0], country_color(g,code))
+        for hole in rings[1:]: draw_ring(hole, water)
 
 image.save('Assets/earth-countries.png', optimize=True)
 raw=bytearray(image.tobytes())

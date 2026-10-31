@@ -12,11 +12,15 @@ namespace NewsApp.Controls;
 
 public sealed class GlobeControl : Control
 {
+    private readonly record struct GlobePoint(double X, double Y, double Z);
+    private readonly record struct GeoTriangle(Point A, Point B, Point C);
+
     private sealed class CountryShape
     {
         public string Code { get; init; } = "";
         public string Name { get; init; } = "";
         public List<List<Point>> Polygons { get; } = new();
+        public List<GeoTriangle> Triangles { get; } = new();
         public Point LabelPoint { get; set; }
         public double SizeScore { get; set; }
     }
@@ -142,6 +146,7 @@ public sealed class GlobeControl : Control
             points.Add(new Point(coordinate[0].GetDouble(), coordinate[1].GetDouble()));
         }
         if (points.Count >= 3) country.Polygons.Add(points);
+        if (points.Count >= 3) country.Triangles.AddRange(Triangulate(points));
     }
 
     public override void Render(DrawingContext context)
@@ -158,8 +163,8 @@ public sealed class GlobeControl : Control
                 var isSelected = country.Code.Equals(SelectedCountryCode, StringComparison.OrdinalIgnoreCase);
                 var fill = isSelected ? new SolidColorBrush(Color.Parse("#F5B642")) : CountryColor(country);
                 var pen = new Pen(new SolidColorBrush(isSelected ? Colors.White : Color.Parse("#B8C9AE")), isSelected ? 1.8 : 0.6);
-                foreach (var polygon in country.Polygons)
-                    DrawPolygon(context, polygon, center, radius, fill, pen);
+                foreach (var triangle in country.Triangles)
+                    DrawTriangle(context, triangle, center, radius, fill, pen);
                 var label = Project(country.LabelPoint.X, country.LabelPoint.Y, center, radius);
                 if (label is not null && radius > 130 && ShouldShowLabel(country))
                 {
@@ -356,20 +361,130 @@ public sealed class GlobeControl : Control
         "IL" => "Израиль", "UA" => "Украина", "ZA" => "ЮАР", _ => fallback
     };
 
-    private void DrawPolygon(DrawingContext context, List<Point> polygon, Point center, double radius, IBrush fill, Pen pen)
+    private void DrawTriangle(DrawingContext context, GeoTriangle triangle, Point center, double radius, IBrush fill, Pen pen)
     {
-        var projected = polygon.Select(point => Project(point.X, point.Y, center, radius)).ToList();
-        var visible = projected.Where(x => x is not null).Select(x => x!.Value).ToList();
-        if (visible.Count < 3) return;
+        var source = new[] { ToRotatedPoint(triangle.A), ToRotatedPoint(triangle.B), ToRotatedPoint(triangle.C) };
+        var clipped = new List<GlobePoint>();
+        for (var index = 0; index < source.Length; index++)
+        {
+            var previous = source[(index + source.Length - 1) % source.Length];
+            var current = source[index];
+            var previousVisible = previous.Z >= -0.02;
+            var currentVisible = current.Z >= -0.02;
+            if (previousVisible != currentVisible)
+                clipped.Add(IntersectHorizon(previous, current));
+            if (currentVisible) clipped.Add(current);
+        }
+
+        if (clipped.Count < 3) return;
+        var projected = clipped.Select(point => new Point(
+            center.X + point.X * radius,
+            center.Y - point.Y * radius)).ToList();
 
         var geometry = new StreamGeometry();
         using (var builder = geometry.Open())
         {
-            builder.BeginFigure(visible[0], true);
-            foreach (var point in visible.Skip(1)) builder.LineTo(point);
+            builder.BeginFigure(projected[0], true);
+            foreach (var point in projected.Skip(1)) builder.LineTo(point);
             builder.EndFigure(true);
         }
         context.DrawGeometry(fill, pen, geometry);
+    }
+
+    private GlobePoint ToRotatedPoint(Point coordinate)
+    {
+        var longitude = coordinate.X * Math.PI / 180;
+        var latitude = coordinate.Y * Math.PI / 180;
+        var x = Math.Cos(latitude) * Math.Cos(longitude);
+        var y = Math.Sin(latitude);
+        var z = Math.Cos(latitude) * Math.Sin(longitude);
+        var x1 = x * Math.Cos(_yaw) - z * Math.Sin(_yaw);
+        var z1 = x * Math.Sin(_yaw) + z * Math.Cos(_yaw);
+        var y2 = y * Math.Cos(_pitch) - z1 * Math.Sin(_pitch);
+        var z2 = y * Math.Sin(_pitch) + z1 * Math.Cos(_pitch);
+        return new GlobePoint(x1, y2, z2);
+    }
+
+    private static GlobePoint IntersectHorizon(GlobePoint first, GlobePoint second)
+    {
+        var amount = (-0.02 - first.Z) / (second.Z - first.Z);
+        return new GlobePoint(
+            first.X + (second.X - first.X) * amount,
+            first.Y + (second.Y - first.Y) * amount,
+            -0.02);
+    }
+
+    private static IEnumerable<GeoTriangle> Triangulate(List<Point> source)
+    {
+        var points = new List<Point>();
+        var previousLongitude = 0d;
+        foreach (var point in source)
+        {
+            var longitude = point.X;
+            while (points.Count > 0 && longitude - previousLongitude > 180) longitude -= 360;
+            while (points.Count > 0 && longitude - previousLongitude < -180) longitude += 360;
+            if (points.Count == 0 || Math.Abs(longitude - previousLongitude) > 0.000001 || Math.Abs(point.Y - points[^1].Y) > 0.000001)
+            {
+                points.Add(new Point(longitude, point.Y));
+                previousLongitude = longitude;
+            }
+        }
+        if (points.Count > 1 && DistanceSquared(points[0], points[^1]) < 0.000001)
+            points.RemoveAt(points.Count - 1);
+        if (points.Count < 3) yield break;
+
+        var indices = Enumerable.Range(0, points.Count).ToList();
+        if (SignedArea(points) < 0) indices.Reverse();
+        var guard = points.Count * points.Count;
+        while (indices.Count > 3 && guard-- > 0)
+        {
+            var earFound = false;
+            for (var i = 0; i < indices.Count; i++)
+            {
+                var previous = points[indices[(i + indices.Count - 1) % indices.Count]];
+                var current = points[indices[i]];
+                var next = points[indices[(i + 1) % indices.Count]];
+                if (Cross(previous, current, next) <= 0) continue;
+                if (indices.Any(index => index != indices[(i + indices.Count - 1) % indices.Count] && index != indices[i] && index != indices[(i + 1) % indices.Count] && PointInTriangle(points[index], previous, current, next)))
+                    continue;
+                yield return new GeoTriangle(previous, current, next);
+                indices.RemoveAt(i);
+                earFound = true;
+                break;
+            }
+            if (!earFound) yield break;
+        }
+        if (indices.Count == 3)
+            yield return new GeoTriangle(points[indices[0]], points[indices[1]], points[indices[2]]);
+    }
+
+    private static double SignedArea(List<Point> points)
+    {
+        var area = 0d;
+        for (var i = 0; i < points.Count; i++)
+        {
+            var next = (i + 1) % points.Count;
+            area += points[i].X * points[next].Y - points[next].X * points[i].Y;
+        }
+        return area / 2;
+    }
+
+    private static double Cross(Point a, Point b, Point c) =>
+        (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
+
+    private static bool PointInTriangle(Point point, Point a, Point b, Point c)
+    {
+        var ab = Cross(a, b, point);
+        var bc = Cross(b, c, point);
+        var ca = Cross(c, a, point);
+        return ab >= -0.000001 && bc >= -0.000001 && ca >= -0.000001;
+    }
+
+    private static double DistanceSquared(Point a, Point b)
+    {
+        var dx = a.X - b.X;
+        var dy = a.Y - b.Y;
+        return dx * dx + dy * dy;
     }
 
     private Point? Project(double longitude, double latitude, Point center, double radius)

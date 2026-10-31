@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using NewsApp.ViewModels;
@@ -179,5 +180,14 @@ public partial class MainWindow : Window
     private void OnArticleScrollToTop(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         ArticleScrollViewer.Offset = new Vector(0, 0);
+    }
+
+    private void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.F11) return;
+        WindowState = WindowState == WindowState.FullScreen
+            ? WindowState.Normal
+            : WindowState.FullScreen;
+        e.Handled = true;
     }
 }

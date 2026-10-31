@@ -5,6 +5,7 @@
         xmlns:controls="using:NewsApp.Controls"
         x:Class="NewsApp.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
+        KeyDown="OnWindowKeyDown"
         Width="1440" Height="880" MinWidth="1100" MinHeight="680"
         Background="#040811" Title="Глобус с новостями">
   <Window.Styles>
@@ -66,13 +67,13 @@
             </StackPanel>
           </Grid>
           <TextBlock Grid.Row="1" Text="{Binding StatusText}" Classes="muted" Margin="0,22,0,16"/>
-          <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" IsVisible="{Binding !IsReadingArticle}">
+          <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" VerticalContentAlignment="Top" IsVisible="{Binding !IsReadingArticle}">
             <ItemsControl ItemsSource="{Binding Articles}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:NewsArticle">
-                  <Border Classes="card">
-                    <Grid ColumnDefinitions="*,190" ColumnSpacing="20">
-                      <StackPanel Spacing="9">
+                  <Border Classes="card" VerticalAlignment="Top">
+                    <Grid ColumnDefinitions="*,190" ColumnSpacing="20" VerticalAlignment="Top">
+                      <StackPanel Spacing="9" VerticalAlignment="Top">
                         <TextBlock Text="{Binding CountryName}" Foreground="#8BC7FF" FontSize="12" FontWeight="Bold"/>
                         <Button Classes="articleTitle" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}">
                           <TextBlock Text="{Binding Title}" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap"/>

@@ -107,6 +107,7 @@ public partial class MainWindow : Window
         _paneFromNews = NewsPanel.Bounds.Width;
         if (_paneFromNews <= 1) _paneFromNews = visible ? ExpandedNewsWidth() : 54;
         _paneToNews = visible ? ExpandedNewsWidth() : 54;
+        UpdateGlobeCenter(_paneToNews);
         _paneAnimationStarted = DateTime.UtcNow;
         _paneAnimationTimer.Start();
     }
@@ -128,7 +129,6 @@ public partial class MainWindow : Window
     {
         var available = Math.Max(0, MainLayout.Bounds.Width);
         NewsPanel.Width = Math.Clamp(newsWidth, 54, Math.Max(54, available - 20));
-        UpdateGlobeCenter(newsWidth);
     }
 
     private void UpdateGlobeCenter(double newsWidth)

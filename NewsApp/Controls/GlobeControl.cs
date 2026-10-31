@@ -12,8 +12,6 @@ namespace NewsApp.Controls;
 
 public sealed class GlobeControl : Control
 {
-    private readonly record struct GlobePoint(double X, double Y, double Z);
-
     private sealed class CountryShape
     {
         public string Code { get; init; } = "";
@@ -354,83 +352,15 @@ public sealed class GlobeControl : Control
 
     private void DrawPolygon(DrawingContext context, List<Point> polygon, Point center, double radius, IBrush fill, Pen pen)
     {
-        var rotated = polygon.Select(ToRotatedPoint).ToList();
-        var visibleRun = new List<GlobePoint>();
-        for (var index = 0; index < rotated.Count; index++)
-        {
-            var previous = rotated[(index + rotated.Count - 1) % rotated.Count];
-            var current = rotated[index];
-            var previousVisible = previous.Z >= -0.02;
-            var currentVisible = current.Z >= -0.02;
+        var projected = polygon.Select(point => Project(point.X, point.Y, center, radius)).ToList();
+        var visible = projected.Where(x => x is not null).Select(x => x!.Value).ToList();
+        if (visible.Count < 3) return;
 
-            if (previousVisible && currentVisible)
-            {
-                if (visibleRun.Count == 0) visibleRun.Add(previous);
-                visibleRun.Add(current);
-            }
-            else if (previousVisible && !currentVisible)
-            {
-                visibleRun.Add(IntersectionAtHorizon(previous, current));
-                DrawVisibleRun(context, visibleRun, center, radius, fill, pen);
-            }
-            else if (!previousVisible && currentVisible)
-            {
-                visibleRun.Clear();
-                visibleRun.Add(IntersectionAtHorizon(previous, current));
-                visibleRun.Add(current);
-            }
-        }
-
-        DrawVisibleRun(context, visibleRun, center, radius, fill, pen);
-    }
-
-    private static void DrawVisibleRun(DrawingContext context, List<GlobePoint> run, Point center, double radius, IBrush fill, Pen pen)
-    {
-        if (run.Count < 3)
-        {
-            run.Clear();
-            return;
-        }
-
-        var projected = run
-            .Select(point => new Point(center.X + point.X * radius, center.Y - point.Y * radius))
-            .ToList();
-        DrawClosedPolygon(context, projected, fill, pen);
-        run.Clear();
-    }
-
-    private static GlobePoint IntersectionAtHorizon(GlobePoint first, GlobePoint second)
-    {
-        var amount = (-0.02 - first.Z) / (second.Z - first.Z);
-        return Lerp(first, second, Math.Clamp(amount, 0, 1));
-    }
-
-    private GlobePoint ToRotatedPoint(Point coordinate)
-    {
-        var longitude = coordinate.X * Math.PI / 180;
-        var latitude = coordinate.Y * Math.PI / 180;
-        var x = Math.Cos(latitude) * Math.Cos(longitude);
-        var y = Math.Sin(latitude);
-        var z = Math.Cos(latitude) * Math.Sin(longitude);
-        var x1 = x * Math.Cos(_yaw) - z * Math.Sin(_yaw);
-        var z1 = x * Math.Sin(_yaw) + z * Math.Cos(_yaw);
-        var y2 = y * Math.Cos(_pitch) - z1 * Math.Sin(_pitch);
-        var z2 = y * Math.Sin(_pitch) + z1 * Math.Cos(_pitch);
-        return new GlobePoint(x1, y2, z2);
-    }
-
-    private static GlobePoint Lerp(GlobePoint first, GlobePoint second, double amount) =>
-        new(first.X + (second.X - first.X) * amount,
-            first.Y + (second.Y - first.Y) * amount,
-            first.Z + (second.Z - first.Z) * amount);
-
-    private static void DrawClosedPolygon(DrawingContext context, List<Point> points, IBrush fill, Pen pen)
-    {
         var geometry = new StreamGeometry();
         using (var builder = geometry.Open())
         {
-            builder.BeginFigure(points[0], true);
-            foreach (var point in points.Skip(1)) builder.LineTo(point);
+            builder.BeginFigure(visible[0], true);
+            foreach (var point in visible.Skip(1)) builder.LineTo(point);
             builder.EndFigure(true);
         }
         context.DrawGeometry(fill, pen, geometry);

@@ -28,7 +28,7 @@ public partial class MainWindow : Window
         _refreshAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(35) };
         _refreshAnimationTimer.Tick += (_, _) =>
         {
-            _refreshAngle = (_refreshAngle + 12) % 360;
+            _refreshAngle = (_refreshAngle - 12 + 360) % 360;
             ((RotateTransform)RefreshIcon.RenderTransform!).Angle = _refreshAngle;
         };
         _paneAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(28) };

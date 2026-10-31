@@ -352,18 +352,48 @@ public sealed class GlobeControl : Control
 
     private void DrawPolygon(DrawingContext context, List<Point> polygon, Point center, double radius, IBrush fill, Pen pen)
     {
-        var projected = polygon.Select(point => Project(point.X, point.Y, center, radius)).ToList();
-        var visible = projected.Where(x => x is not null).Select(x => x!.Value).ToList();
-        if (visible.Count < 3) return;
+        var visiblePart = new List<Point>();
+        for (var index = 0; index < polygon.Count; index++)
+        {
+            var current = polygon[index];
+            var previous = polygon[(index + polygon.Count - 1) % polygon.Count];
+
+            // Не соединяем противоположные стороны карты через линию смены дат.
+            if (Math.Abs(current.X - previous.X) > 180)
+                DrawVisiblePolygonPart(context, visiblePart, fill, pen);
+
+            var projected = Project(current.X, current.Y, center, radius);
+            if (projected is null)
+            {
+                // Невидимая часть находится за поверхностью шара. Ее нельзя
+                // соединять с видимой частью прямой линией.
+                DrawVisiblePolygonPart(context, visiblePart, fill, pen);
+                continue;
+            }
+
+            visiblePart.Add(projected.Value);
+        }
+
+        DrawVisiblePolygonPart(context, visiblePart, fill, pen);
+    }
+
+    private static void DrawVisiblePolygonPart(DrawingContext context, List<Point> points, IBrush fill, Pen pen)
+    {
+        if (points.Count < 3)
+        {
+            points.Clear();
+            return;
+        }
 
         var geometry = new StreamGeometry();
         using (var builder = geometry.Open())
         {
-            builder.BeginFigure(visible[0], true);
-            foreach (var point in visible.Skip(1)) builder.LineTo(point);
+            builder.BeginFigure(points[0], true);
+            foreach (var point in points.Skip(1)) builder.LineTo(point);
             builder.EndFigure(true);
         }
         context.DrawGeometry(fill, pen, geometry);
+        points.Clear();
     }
 
     private Point? Project(double longitude, double latitude, Point center, double radius)

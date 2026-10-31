@@ -29,7 +29,7 @@ public partial class MainWindow : Window
             _refreshAngle = (_refreshAngle + 12) % 360;
             ((RotateTransform)RefreshIcon.RenderTransform!).Angle = _refreshAngle;
         };
-        _paneAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _paneAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(28) };
         _paneAnimationTimer.Tick += OnPaneAnimationTick;
         MainLayout.SizeChanged += (_, _) =>
         {

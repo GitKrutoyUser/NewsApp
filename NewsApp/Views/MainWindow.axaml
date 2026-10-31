@@ -27,7 +27,6 @@
   <Grid x:Name="MainLayout">
     <controls:StarfieldControl/>
     <controls:GlobeControl x:Name="Globe" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="18"/>
-    <controls:StarfieldControl DrawBackground="False" Opacity="0.28"/>
 
     <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="28,0,0,28" Background="#99101929" BorderBrush="#665D7896" BorderThickness="1" CornerRadius="18" Padding="16,10" BoxShadow="0 10 28 0 #77000000">
       <StackPanel Spacing="7">
@@ -98,10 +97,10 @@
               <Button ToolTip.Tip="В начало статьи" Click="OnArticleScrollToTop" Padding="12,9"><TextBlock Classes="toolbarIcon" Text="↑"/></Button>
             </StackPanel>
             <ScrollViewer x:Name="ArticleScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto">
-              <Border Background="#CC111A25" CornerRadius="16" Padding="28" HorizontalAlignment="Center" MaxWidth="900">
+              <Border Background="#D90E1827" BorderBrush="#806482A0" BorderThickness="1" CornerRadius="20" Padding="28" HorizontalAlignment="Center" MaxWidth="900" BoxShadow="0 12 36 0 #88000000">
                 <StackPanel Spacing="18">
-                  <Border Background="#CC182536" CornerRadius="12" Padding="20"><StackPanel Spacing="10"><TextBlock Text="{Binding OpenedArticle.CountryName}" Foreground="#8BC7FF" FontSize="13" FontWeight="Bold"/><TextBlock Text="{Binding OpenedArticle.Title}" FontSize="30" FontWeight="Bold" Foreground="#F7FAFD" TextWrapping="Wrap"/><StackPanel Orientation="Horizontal" Spacing="12"><TextBlock Text="{Binding OpenedArticle.PublishedAtText}" Classes="muted"/><TextBlock Text="•" Classes="muted"/><TextBlock Text="Встроенное чтение" Classes="muted"/><Button Classes="link" Command="{Binding OpenArticleInBrowserCommand}" CommandParameter="{Binding OpenedArticle}"><TextBlock Text="Открыть на сайте ↗"/></Button></StackPanel></StackPanel></Border>
-                  <Image Source="{Binding OpenedArticle.ImageBitmap}" MaxHeight="360" Stretch="Uniform" HorizontalAlignment="Center"/>
+                  <Border Background="#B5122030" BorderBrush="#665F82A2" BorderThickness="1" CornerRadius="16" Padding="20"><StackPanel Spacing="10"><TextBlock Text="{Binding OpenedArticle.CountryName}" Foreground="#8BC7FF" FontSize="13" FontWeight="Bold"/><TextBlock Text="{Binding OpenedArticle.Title}" FontSize="30" FontWeight="Bold" Foreground="#F7FAFD" TextWrapping="Wrap"/><StackPanel Orientation="Horizontal" Spacing="12"><TextBlock Text="{Binding OpenedArticle.PublishedAtText}" Classes="muted"/><TextBlock Text="•" Classes="muted"/><TextBlock Text="Встроенное чтение" Classes="muted"/><Button Classes="link" Command="{Binding OpenArticleInBrowserCommand}" CommandParameter="{Binding OpenedArticle}"><TextBlock Text="Открыть на сайте ↗"/></Button></StackPanel></StackPanel></Border>
+                  <Border Background="#66101A25" BorderBrush="#665F82A2" BorderThickness="1" CornerRadius="16" Padding="8" IsVisible="{Binding OpenedArticle.HasImage}"><Image Source="{Binding OpenedArticle.ImageBitmap}" MaxHeight="360" Stretch="Uniform" HorizontalAlignment="Center"/></Border>
                   <TextBlock Text="Загрузка материалов статьи…" Classes="muted" IsVisible="{Binding IsArticleLoading}"/>
                   <ItemsControl ItemsSource="{Binding OpenedArticleParagraphs}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="17" LineHeight="29" Foreground="#D8E1EB" TextWrapping="Wrap" Margin="0,0,0,12"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                 </StackPanel>

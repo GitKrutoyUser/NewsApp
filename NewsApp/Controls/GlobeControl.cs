@@ -144,7 +144,6 @@ public sealed class GlobeControl : Control
 
     public override void Render(DrawingContext context)
     {
-        DrawStars(context);
         GetSceneGeometry(out var center, out var radius, out var moonCenter, out var moonRadius, out var moonOrbit);
         context.DrawEllipse(new SolidColorBrush(Color.Parse("#142B3A")), new Pen(new SolidColorBrush(Color.Parse("#78A7A9")), 2), center, radius, radius);
 

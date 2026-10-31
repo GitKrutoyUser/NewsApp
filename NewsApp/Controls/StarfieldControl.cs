@@ -19,7 +19,7 @@ public sealed class StarfieldControl : Control
     {
         IsHitTestVisible = false;
         _stars = CreateStars();
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(35) };
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(55) };
         _timer.Tick += (_, _) =>
         {
             _time += 0.0018;

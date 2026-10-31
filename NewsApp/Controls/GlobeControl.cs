@@ -103,6 +103,8 @@ public sealed class GlobeControl : Control
             {
                 var properties = feature.GetProperty("properties");
                 var code = properties.TryGetProperty("ISO_A2", out var iso) ? iso.GetString() : null;
+                if (string.IsNullOrWhiteSpace(code) || code == "-99")
+                    code = properties.TryGetProperty("ISO_A2_EH", out var isoEh) ? isoEh.GetString() : null;
                 var name = properties.TryGetProperty("ADMIN", out var admin) ? admin.GetString() : null;
                 if (string.IsNullOrWhiteSpace(code) || code == "-99") continue;
 
@@ -357,55 +359,17 @@ public sealed class GlobeControl : Control
     private void DrawPolygon(DrawingContext context, List<Point> polygon, Point center, double radius, IBrush fill, Pen pen)
     {
         var projected = polygon.Select(point => Project(point.X, point.Y, center, radius)).ToList();
-        var visibleRun = new List<Point>();
-        for (var index = 0; index < projected.Count; index++)
+        var visible = projected.Where(x => x is not null).Select(x => x!.Value).ToList();
+        if (visible.Count < 3) return;
+
+        var geometry = new StreamGeometry();
+        using (var builder = geometry.Open())
         {
-            var previous = projected[(index + projected.Count - 1) % projected.Count];
-            var current = projected[index];
-            var previousGeo = polygon[(index + polygon.Count - 1) % polygon.Count];
-            var currentGeo = polygon[index];
-
-            if (Math.Abs(currentGeo.X - previousGeo.X) > 180)
-            {
-                DrawVisibleCountryPart(context, visibleRun, fill, pen);
-                if (current is not null) visibleRun.Add(current.Value);
-                continue;
-            }
-
-            if (previous is not null && current is not null)
-            {
-                if (visibleRun.Count == 0) visibleRun.Add(previous.Value);
-                visibleRun.Add(current.Value);
-            }
-            else if (previous is not null)
-            {
-                if (visibleRun.Count == 0) visibleRun.Add(previous.Value);
-                DrawVisibleCountryPart(context, visibleRun, fill, pen);
-            }
-            else if (current is not null)
-            {
-                visibleRun.Clear();
-                visibleRun.Add(current.Value);
-            }
+            builder.BeginFigure(visible[0], true);
+            foreach (var point in visible.Skip(1)) builder.LineTo(point);
+            builder.EndFigure(true);
         }
-
-        DrawVisibleCountryPart(context, visibleRun, fill, pen);
-    }
-
-    private static void DrawVisibleCountryPart(DrawingContext context, List<Point> points, IBrush fill, Pen pen)
-    {
-        if (points.Count >= 3)
-        {
-            var geometry = new StreamGeometry();
-            using (var builder = geometry.Open())
-            {
-                builder.BeginFigure(points[0], true);
-                foreach (var point in points.Skip(1)) builder.LineTo(point);
-                builder.EndFigure(true);
-            }
-            context.DrawGeometry(fill, pen, geometry);
-        }
-        points.Clear();
+        context.DrawGeometry(fill, pen, geometry);
     }
 
     private Point? Project(double longitude, double latitude, Point center, double radius)

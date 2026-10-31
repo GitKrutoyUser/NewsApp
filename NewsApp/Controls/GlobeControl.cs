@@ -355,7 +355,7 @@ public sealed class GlobeControl : Control
     private void DrawPolygon(DrawingContext context, List<Point> polygon, Point center, double radius, IBrush fill, Pen pen)
     {
         var rotated = polygon.Select(ToRotatedPoint).ToList();
-        var clipped = new List<GlobePoint>();
+        var visibleRun = new List<GlobePoint>();
         for (var index = 0; index < rotated.Count; index++)
         {
             var previous = rotated[(index + rotated.Count - 1) % rotated.Count];
@@ -363,24 +363,46 @@ public sealed class GlobeControl : Control
             var previousVisible = previous.Z >= -0.02;
             var currentVisible = current.Z >= -0.02;
 
-            if (previousVisible != currentVisible)
+            if (previousVisible && currentVisible)
             {
-                var denominator = current.Z - previous.Z;
-                if (Math.Abs(denominator) > 0.000001)
-                {
-                    var amount = (-0.02 - previous.Z) / denominator;
-                    clipped.Add(Lerp(previous, current, amount));
-                }
+                if (visibleRun.Count == 0) visibleRun.Add(previous);
+                visibleRun.Add(current);
             }
-
-            if (currentVisible) clipped.Add(current);
+            else if (previousVisible && !currentVisible)
+            {
+                visibleRun.Add(IntersectionAtHorizon(previous, current));
+                DrawVisibleRun(context, visibleRun, center, radius, fill, pen);
+            }
+            else if (!previousVisible && currentVisible)
+            {
+                visibleRun.Clear();
+                visibleRun.Add(IntersectionAtHorizon(previous, current));
+                visibleRun.Add(current);
+            }
         }
 
-        var projected = clipped
+        DrawVisibleRun(context, visibleRun, center, radius, fill, pen);
+    }
+
+    private static void DrawVisibleRun(DrawingContext context, List<GlobePoint> run, Point center, double radius, IBrush fill, Pen pen)
+    {
+        if (run.Count < 3)
+        {
+            run.Clear();
+            return;
+        }
+
+        var projected = run
             .Select(point => new Point(center.X + point.X * radius, center.Y - point.Y * radius))
             .ToList();
-        if (projected.Count < 3) return;
         DrawClosedPolygon(context, projected, fill, pen);
+        run.Clear();
+    }
+
+    private static GlobePoint IntersectionAtHorizon(GlobePoint first, GlobePoint second)
+    {
+        var amount = (-0.02 - first.Z) / (second.Z - first.Z);
+        return Lerp(first, second, Math.Clamp(amount, 0, 1));
     }
 
     private GlobePoint ToRotatedPoint(Point coordinate)

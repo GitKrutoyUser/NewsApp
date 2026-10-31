@@ -135,8 +135,8 @@ public sealed class GlobeControl : Control
                 if (country.Polygons.Count > 0)
                 {
                     var points = country.Polygons.SelectMany(x => x).ToList();
-                    country.LabelPoint = new Point(points.Average(x => x.X), points.Average(x => x.Y));
                     country.SizeScore = country.Polygons.Max(PolygonAreaScore);
+                    country.LabelPoint = FindLabelPoint(country.Polygons);
                     _countries.Add(country);
                 }
             }
@@ -176,7 +176,8 @@ public sealed class GlobeControl : Control
                 var label = Project(country.LabelPoint.X, country.LabelPoint.Y, center, radius);
                 if (label is not null && radius > 130 && ShouldShowLabel(country))
                 {
-                    var text = new FormattedText(country.Name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 9, Brushes.White);
+                    var textSize = country.SizeScore >= 1400 ? 15 : country.SizeScore >= 700 ? 13 : country.SizeScore >= 220 ? 11 : 9;
+                    var text = new FormattedText(country.Name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, textSize, Brushes.White);
                     var textRect = new Rect(label.Value.X - text.Width / 2 - 3, label.Value.Y - text.Height / 2 - 2, text.Width + 6, text.Height + 4);
                     if (!occupiedLabels.Any(existing => existing.Intersects(textRect)))
                     {
@@ -360,6 +361,35 @@ public sealed class GlobeControl : Control
         return Math.Abs(area) / 2;
     }
 
+    private static Point FindLabelPoint(List<List<Point>> polygons)
+    {
+        var polygon = polygons.OrderByDescending(PolygonAreaScore).First();
+        var centroid = PolygonCentroid(polygon);
+        if (PointInPolygon(centroid.X, centroid.Y, polygon)) return centroid;
+
+        var average = new Point(polygon.Average(point => point.X), polygon.Average(point => point.Y));
+        if (PointInPolygon(average.X, average.Y, polygon)) return average;
+        return polygon[polygon.Count / 2];
+    }
+
+    private static Point PolygonCentroid(List<Point> polygon)
+    {
+        var signedArea = 0d;
+        var centerX = 0d;
+        var centerY = 0d;
+        for (var i = 0; i < polygon.Count; i++)
+        {
+            var next = (i + 1) % polygon.Count;
+            var cross = polygon[i].X * polygon[next].Y - polygon[next].X * polygon[i].Y;
+            signedArea += cross;
+            centerX += (polygon[i].X + polygon[next].X) * cross;
+            centerY += (polygon[i].Y + polygon[next].Y) * cross;
+        }
+        if (Math.Abs(signedArea) < 0.000001)
+            return new Point(polygon.Average(point => point.X), polygon.Average(point => point.Y));
+        return new Point(centerX / (3 * signedArea), centerY / (3 * signedArea));
+    }
+
     private static string RussianName(string code, string fallback) => code.ToUpperInvariant() switch
     {
         "US" => "США", "RU" => "Россия", "DE" => "Германия", "FR" => "Франция", "GB" => "Великобритания",
@@ -372,7 +402,7 @@ public sealed class GlobeControl : Control
     private void DrawEarthSurface(DrawingContext context, Point center, double radius)
     {
         if (_earthMap is null || _earthMap.Length < 2048 * 1024 * 4) return;
-        var size = (int)Math.Clamp(Math.Round(radius * 2), 280, 512);
+        var size = (int)Math.Clamp(Math.Round(radius * 2), 320, 768);
         if (_earthFrame is null || _earthFrameSize != size)
         {
             _earthFrameSize = size;

@@ -147,25 +147,29 @@ public sealed class GlobeControl : Control
         GetSceneGeometry(out var center, out var radius, out var moonCenter, out var moonRadius, out var moonOrbit);
         context.DrawEllipse(new SolidColorBrush(Color.Parse("#142B3A")), new Pen(new SolidColorBrush(Color.Parse("#78A7A9")), 2), center, radius, radius);
 
-        var occupiedLabels = new List<Rect>();
-        foreach (var country in _countries.OrderByDescending(x => x.SizeScore))
+        using (context.PushGeometryClip(new EllipseGeometry(new Rect(
+            center.X - radius, center.Y - radius, radius * 2, radius * 2))))
         {
-            var isSelected = country.Code.Equals(SelectedCountryCode, StringComparison.OrdinalIgnoreCase);
-            var fill = isSelected ? new SolidColorBrush(Color.Parse("#F5B642")) : CountryColor(country);
-            var pen = new Pen(new SolidColorBrush(isSelected ? Colors.White : Color.Parse("#B8C9AE")), isSelected ? 1.8 : 0.6);
-            foreach (var polygon in country.Polygons)
-                DrawPolygon(context, polygon, center, radius, fill, pen);
-            var label = Project(country.LabelPoint.X, country.LabelPoint.Y, center, radius);
-            if (label is not null && radius > 130 && ShouldShowLabel(country))
+            var occupiedLabels = new List<Rect>();
+            foreach (var country in _countries.OrderByDescending(x => x.SizeScore))
             {
-                var text = new FormattedText(country.Name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 9, Brushes.White);
-                var textRect = new Rect(label.Value.X - text.Width / 2 - 3, label.Value.Y - text.Height / 2 - 2, text.Width + 6, text.Height + 4);
-                if (!occupiedLabels.Any(existing => existing.Intersects(textRect)))
+                var isSelected = country.Code.Equals(SelectedCountryCode, StringComparison.OrdinalIgnoreCase);
+                var fill = isSelected ? new SolidColorBrush(Color.Parse("#F5B642")) : CountryColor(country);
+                var pen = new Pen(new SolidColorBrush(isSelected ? Colors.White : Color.Parse("#B8C9AE")), isSelected ? 1.8 : 0.6);
+                foreach (var polygon in country.Polygons)
+                    DrawPolygon(context, polygon, center, radius, fill, pen);
+                var label = Project(country.LabelPoint.X, country.LabelPoint.Y, center, radius);
+                if (label is not null && radius > 130 && ShouldShowLabel(country))
                 {
-                    occupiedLabels.Add(textRect);
-                    context.DrawText(text, new Point(label.Value.X - text.Width / 2, label.Value.Y - text.Height / 2));
-                    if (_newCountryCodes.Contains(country.Code))
-                        context.DrawEllipse(Brushes.OrangeRed, null, new Point(textRect.Right + 4, label.Value.Y), 4, 4);
+                    var text = new FormattedText(country.Name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 9, Brushes.White);
+                    var textRect = new Rect(label.Value.X - text.Width / 2 - 3, label.Value.Y - text.Height / 2 - 2, text.Width + 6, text.Height + 4);
+                    if (!occupiedLabels.Any(existing => existing.Intersects(textRect)))
+                    {
+                        occupiedLabels.Add(textRect);
+                        context.DrawText(text, new Point(label.Value.X - text.Width / 2, label.Value.Y - text.Height / 2));
+                        if (_newCountryCodes.Contains(country.Code))
+                            context.DrawEllipse(Brushes.OrangeRed, null, new Point(textRect.Right + 4, label.Value.Y), 4, 4);
+                    }
                 }
             }
         }
@@ -353,17 +357,55 @@ public sealed class GlobeControl : Control
     private void DrawPolygon(DrawingContext context, List<Point> polygon, Point center, double radius, IBrush fill, Pen pen)
     {
         var projected = polygon.Select(point => Project(point.X, point.Y, center, radius)).ToList();
-        var visible = projected.Where(x => x is not null).Select(x => x!.Value).ToList();
-        if (visible.Count < 3) return;
-
-        var geometry = new StreamGeometry();
-        using (var builder = geometry.Open())
+        var visibleRun = new List<Point>();
+        for (var index = 0; index < projected.Count; index++)
         {
-            builder.BeginFigure(visible[0], true);
-            foreach (var point in visible.Skip(1)) builder.LineTo(point);
-            builder.EndFigure(true);
+            var previous = projected[(index + projected.Count - 1) % projected.Count];
+            var current = projected[index];
+            var previousGeo = polygon[(index + polygon.Count - 1) % polygon.Count];
+            var currentGeo = polygon[index];
+
+            if (Math.Abs(currentGeo.X - previousGeo.X) > 180)
+            {
+                DrawVisibleCountryPart(context, visibleRun, fill, pen);
+                if (current is not null) visibleRun.Add(current.Value);
+                continue;
+            }
+
+            if (previous is not null && current is not null)
+            {
+                if (visibleRun.Count == 0) visibleRun.Add(previous.Value);
+                visibleRun.Add(current.Value);
+            }
+            else if (previous is not null)
+            {
+                if (visibleRun.Count == 0) visibleRun.Add(previous.Value);
+                DrawVisibleCountryPart(context, visibleRun, fill, pen);
+            }
+            else if (current is not null)
+            {
+                visibleRun.Clear();
+                visibleRun.Add(current.Value);
+            }
         }
-        context.DrawGeometry(fill, pen, geometry);
+
+        DrawVisibleCountryPart(context, visibleRun, fill, pen);
+    }
+
+    private static void DrawVisibleCountryPart(DrawingContext context, List<Point> points, IBrush fill, Pen pen)
+    {
+        if (points.Count >= 3)
+        {
+            var geometry = new StreamGeometry();
+            using (var builder = geometry.Open())
+            {
+                builder.BeginFigure(points[0], true);
+                foreach (var point in points.Skip(1)) builder.LineTo(point);
+                builder.EndFigure(true);
+            }
+            context.DrawGeometry(fill, pen, geometry);
+        }
+        points.Clear();
     }
 
     private Point? Project(double longitude, double latitude, Point center, double radius)

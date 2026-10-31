@@ -12,10 +12,12 @@ public partial class MainWindow : Window
     private MainWindowViewModel? _viewModel;
     private readonly DispatcherTimer _refreshAnimationTimer;
     private readonly DispatcherTimer _paneAnimationTimer;
+    private readonly DispatcherTimer _contentFadeTimer;
     private double _refreshAngle;
     private double _paneFromNews;
     private double _paneToNews;
     private DateTime _paneAnimationStarted;
+    private DateTime _contentFadeStarted;
 
     public MainWindow()
     {
@@ -31,6 +33,8 @@ public partial class MainWindow : Window
         };
         _paneAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(28) };
         _paneAnimationTimer.Tick += OnPaneAnimationTick;
+        _contentFadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(24) };
+        _contentFadeTimer.Tick += OnContentFadeTick;
         MainLayout.SizeChanged += (_, _) =>
         {
             if (!_paneAnimationTimer.IsEnabled)
@@ -43,6 +47,7 @@ public partial class MainWindow : Window
             LoadingGlobe.StopAutoRotation();
             _refreshAnimationTimer.Stop();
             _paneAnimationTimer.Stop();
+            _contentFadeTimer.Stop();
             (DataContext as IDisposable)?.Dispose();
         };
     }
@@ -62,6 +67,7 @@ public partial class MainWindow : Window
             _viewModel.NewCountriesChanged += OnNewCountriesChanged;
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             UpdateNewsPaneButton();
+            NewsContent.IsVisible = _viewModel.IsNewsPaneVisible;
             SetPaneLayout(_viewModel.IsNewsPaneVisible, false);
         }
     }
@@ -80,6 +86,9 @@ public partial class MainWindow : Window
         }
         else if (e.PropertyName == nameof(MainWindowViewModel.IsNewsPaneVisible))
         {
+            _contentFadeTimer.Stop();
+            NewsContent.IsVisible = false;
+            NewsContent.Opacity = 0;
             UpdateNewsPaneButton();
             AnimateNewsPane(_viewModel?.IsNewsPaneVisible != false);
         }
@@ -93,8 +102,8 @@ public partial class MainWindow : Window
     private void UpdateNewsPaneButton()
     {
         NewsPaneToggleButton.Content = CreateIcon(_viewModel?.IsNewsPaneVisible == false
-            ? "M 9,5 L 16,12 L 9,19"
-            : "M 15,5 L 8,12 L 15,19");
+            ? "M 7,2 L 18,12 L 7,22 L 4,19 L 12,12 L 4,5 Z"
+            : "M 17,2 L 6,12 L 17,22 L 20,19 L 12,12 L 20,5 Z");
     }
 
     private void AnimateNewsPane(bool visible)
@@ -119,7 +128,20 @@ public partial class MainWindow : Window
         {
             _paneAnimationTimer.Stop();
             SetPaneLayout(_viewModel?.IsNewsPaneVisible != false, false);
+            if (_viewModel?.IsNewsPaneVisible == true)
+            {
+                NewsContent.IsVisible = true;
+                _contentFadeStarted = DateTime.UtcNow;
+                _contentFadeTimer.Start();
+            }
         }
+    }
+
+    private void OnContentFadeTick(object? sender, EventArgs e)
+    {
+        var progress = Math.Clamp((DateTime.UtcNow - _contentFadeStarted).TotalMilliseconds / 220d, 0, 1);
+        NewsContent.Opacity = progress * progress * (3 - 2 * progress);
+        if (progress >= 1) _contentFadeTimer.Stop();
     }
 
     private void SetPaneWidths(double newsWidth)
@@ -168,8 +190,8 @@ public partial class MainWindow : Window
     {
         Globe.ToggleAutoRotation();
         AutoRotationButton.Content = CreateIcon(Globe.IsAutoRotating
-            ? "M 6,6 H 18 V 18 H 6 Z"
-            : "M 7,5 L 18,12 L 7,19 Z");
+            ? "M 5,5 H 19 V 19 H 5 Z"
+            : "M 6,3 L 20,12 L 6,21 Z");
     }
 
     private static PathIcon CreateIcon(string data) => new()

@@ -40,9 +40,9 @@
     <Border x:Name="NewsPanel" Classes="newsPanel" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,20,24,20" Width="720">
       <Grid ColumnDefinitions="Auto,*">
         <Button x:Name="NewsPaneToggleButton" Grid.Column="0" Classes="panelHandle" Command="{Binding ToggleNewsPaneCommand}" ToolTip.Tip="Показать или скрыть новости" CornerRadius="10" Margin="-1,0,10,0">
-          <PathIcon Data="M 15,5 L 8,12 L 15,19" Width="20" Height="20" Foreground="#EAF5FF"/>
+          <PathIcon Data="M 17,4 L 9,12 L 17,20 L 14,23 L 3,12 L 14,1 Z" Width="20" Height="20" Foreground="#EAF5FF"/>
         </Button>
-        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="0,12,12,12" IsVisible="{Binding IsNewsPaneVisible}">
+        <Grid x:Name="NewsContent" Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="0,12,12,12" IsVisible="False" Opacity="1">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="5">
@@ -53,7 +53,7 @@
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="0" VerticalAlignment="Top">
               <Button x:Name="RefreshButton" Classes="refreshMain" Command="{Binding RefreshCommand}" ToolTip.Tip="Обновить через API" CornerRadius="9,0,0,9" IsEnabled="{Binding !IsRefreshing}">
-                <PathIcon x:Name="RefreshIcon" Data="M 20,11 A 8,8 0 1 0 18,16 M 20,11 L 20,5 M 20,11 L 14,11" Width="20" Height="20" Foreground="#F6FAFF"/>
+                <PathIcon x:Name="RefreshIcon" Data="M 21,10 A 9,9 0 1 0 18,18 L 14,14 L 21,14 Z" Width="20" Height="20" Foreground="#F6FAFF"/>
               </Button>
               <Button Classes="refreshMore" ToolTip.Tip="Выбрать способ обновления" CornerRadius="0,9,9,0" IsEnabled="{Binding !IsRefreshing}">
                 <TextBlock Text="⌄" FontSize="17" FontWeight="Bold"/>
@@ -93,8 +93,8 @@
           </ScrollViewer>
           <Grid Grid.Row="2" IsVisible="{Binding IsReadingArticle}" ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <StackPanel Spacing="10" VerticalAlignment="Top">
-              <Button ToolTip.Tip="Назад к новостям" Command="{Binding CloseArticleCommand}" Padding="12,9"><PathIcon Data="M 19,12 L 5,12 M 5,12 L 11,6 M 5,12 L 11,18" Width="20" Height="20" Foreground="#EAF5FF"/></Button>
-              <Button ToolTip.Tip="В начало статьи" Click="OnArticleScrollToTop" Padding="12,9"><PathIcon Data="M 12,19 L 12,5 M 12,5 L 6,11 M 12,5 L 18,11" Width="20" Height="20" Foreground="#EAF5FF"/></Button>
+              <Button ToolTip.Tip="Назад к новостям" Command="{Binding CloseArticleCommand}" Padding="12,9"><PathIcon Data="M 20,9 L 9,9 L 13,5 L 10,2 L 2,10 L 10,18 L 13,15 L 9,11 L 20,11 Z" Width="20" Height="20" Foreground="#EAF5FF"/></Button>
+              <Button ToolTip.Tip="В начало статьи" Click="OnArticleScrollToTop" Padding="12,9"><PathIcon Data="M 10,20 L 10,9 L 6,13 L 3,10 L 12,1 L 21,10 L 18,13 L 14,9 L 14,20 Z" Width="20" Height="20" Foreground="#EAF5FF"/></Button>
             </StackPanel>
             <ScrollViewer x:Name="ArticleScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto">
               <Border Background="#D90E1827" BorderBrush="#806482A0" BorderThickness="1" CornerRadius="20" Padding="28" HorizontalAlignment="Center" MaxWidth="900" BoxShadow="0 12 36 0 #88000000">

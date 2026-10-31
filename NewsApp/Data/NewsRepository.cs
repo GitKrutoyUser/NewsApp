@@ -62,6 +62,7 @@ public sealed class NewsRepository
         using var cleanup = connection.CreateCommand();
         cleanup.CommandText = "DELETE FROM news WHERE description IS NULL OR TRIM(description) = '';";
         cleanup.ExecuteNonQuery();
+        RemoveDuplicateNews(connection);
     }
 
     public void SaveNews(IEnumerable<NewsArticle> articles)
@@ -108,7 +109,27 @@ public sealed class NewsRepository
             image.Value = (object?)article.ImageUrl ?? DBNull.Value;
             command.ExecuteNonQuery();
         }
+        RemoveDuplicateNews(connection, transaction);
         transaction.Commit();
+    }
+
+    private static void RemoveDuplicateNews(SqliteConnection connection, SqliteTransaction? transaction = null)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            DELETE FROM news AS duplicate
+            WHERE EXISTS (
+                SELECT 1
+                FROM news AS newer
+                WHERE newer.country_code = duplicate.country_code
+                  AND lower(trim(newer.title)) = lower(trim(duplicate.title))
+                  AND trim(newer.title) <> ''
+                  AND (newer.published_at > duplicate.published_at
+                       OR (newer.published_at = duplicate.published_at AND newer.rowid > duplicate.rowid))
+            );
+            """;
+        command.ExecuteNonQuery();
     }
 
     public HashSet<string> GetKnownUrls()

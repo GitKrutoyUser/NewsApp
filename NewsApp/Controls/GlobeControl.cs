@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Globalization;
+using System.IO.Compression;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -23,6 +25,12 @@ public sealed class GlobeControl : Control
 
     private readonly List<CountryShape> _countries = new();
     private readonly Bitmap? _moonTexture;
+    private readonly byte[]? _earthMap;
+    private WriteableBitmap? _earthFrame;
+    private byte[]? _earthFramePixels;
+    private int _earthFrameSize;
+    private double _earthFrameYaw = double.NaN;
+    private double _earthFramePitch = double.NaN;
     private readonly (double X, double Y, double Size, byte Alpha)[] _stars;
     private Point _lastPointer;
     private bool _dragging;
@@ -61,6 +69,15 @@ public sealed class GlobeControl : Control
             _moonTexture = new Bitmap(stream);
         }
         catch { _moonTexture = null; }
+        try
+        {
+            using var stream = AssetLoader.Open(new Uri("avares://NewsApp/Assets/earth-countries.bgra.gz"));
+            using var gzip = new GZipStream(stream, CompressionMode.Decompress);
+            using var buffer = new MemoryStream();
+            gzip.CopyTo(buffer);
+            _earthMap = buffer.ToArray();
+        }
+        catch { _earthMap = null; }
         _rotationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _rotationTimer.Tick += (_, _) =>
         {
@@ -152,14 +169,10 @@ public sealed class GlobeControl : Control
         using (context.PushGeometryClip(new EllipseGeometry(new Rect(
             center.X - radius, center.Y - radius, radius * 2, radius * 2))))
         {
+            DrawEarthSurface(context, center, radius);
             var occupiedLabels = new List<Rect>();
             foreach (var country in _countries.OrderByDescending(x => x.SizeScore))
             {
-                var isSelected = country.Code.Equals(SelectedCountryCode, StringComparison.OrdinalIgnoreCase);
-                var fill = isSelected ? new SolidColorBrush(Color.Parse("#F5B642")) : CountryColor(country);
-                var pen = new Pen(new SolidColorBrush(isSelected ? Colors.White : Color.Parse("#B8C9AE")), isSelected ? 1.8 : 0.6);
-                foreach (var polygon in country.Polygons)
-                    DrawPolygon(context, polygon, center, radius, fill, pen);
                 var label = Project(country.LabelPoint.X, country.LabelPoint.Y, center, radius);
                 if (label is not null && radius > 130 && ShouldShowLabel(country))
                 {
@@ -356,20 +369,66 @@ public sealed class GlobeControl : Control
         "IL" => "Израиль", "UA" => "Украина", "ZA" => "ЮАР", _ => fallback
     };
 
-    private void DrawPolygon(DrawingContext context, List<Point> polygon, Point center, double radius, IBrush fill, Pen pen)
+    private void DrawEarthSurface(DrawingContext context, Point center, double radius)
     {
-        var projected = polygon.Select(point => Project(point.X, point.Y, center, radius)).ToList();
-        var visible = projected.Where(x => x is not null).Select(x => x!.Value).ToList();
-        if (visible.Count < 3) return;
-
-        var geometry = new StreamGeometry();
-        using (var builder = geometry.Open())
+        if (_earthMap is null || _earthMap.Length < 2048 * 1024 * 4) return;
+        var size = (int)Math.Clamp(Math.Round(radius * 2), 280, 512);
+        if (_earthFrame is null || _earthFrameSize != size)
         {
-            builder.BeginFigure(visible[0], true);
-            foreach (var point in visible.Skip(1)) builder.LineTo(point);
-            builder.EndFigure(true);
+            _earthFrameSize = size;
+            _earthFrame = new WriteableBitmap(new PixelSize(size, size), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
+            _earthFramePixels = new byte[size * size * 4];
+            _earthFrameYaw = double.NaN;
         }
-        context.DrawGeometry(fill, pen, geometry);
+
+        if (_earthFramePixels is null || Math.Abs(_earthFrameYaw - _yaw) < 0.00001 && Math.Abs(_earthFramePitch - _pitch) < 0.00001)
+        {
+            context.DrawImage(_earthFrame!, new Rect(0, 0, size, size), new Rect(center.X - radius, center.Y - radius, radius * 2, radius * 2));
+            return;
+        }
+
+        var pixels = _earthFramePixels;
+        var half = size / 2d;
+        var sourceWidth = 2048;
+        var sourceHeight = 1024;
+        var cosYaw = Math.Cos(_yaw);
+        var sinYaw = Math.Sin(_yaw);
+        var cosPitch = Math.Cos(_pitch);
+        var sinPitch = Math.Sin(_pitch);
+        Array.Clear(pixels, 0, pixels.Length);
+
+        for (var py = 0; py < size; py++)
+        {
+            var screenY = (py + 0.5 - half) / half;
+            for (var px = 0; px < size; px++)
+            {
+                var screenX = (px + 0.5 - half) / half;
+                var squared = screenX * screenX + screenY * screenY;
+                if (squared > 1) continue;
+                var z2 = Math.Sqrt(1 - squared);
+                var y2 = -screenY;
+                var y = y2 * cosPitch + z2 * sinPitch;
+                var z1 = -y2 * sinPitch + z2 * cosPitch;
+                var x = screenX * cosYaw + z1 * sinYaw;
+                var z = -screenX * sinYaw + z1 * cosYaw;
+                var longitude = Math.Atan2(z, x) * 180 / Math.PI;
+                var latitude = Math.Asin(Math.Clamp(y, -1, 1)) * 180 / Math.PI;
+                var sourceX = (int)Math.Clamp((longitude + 180) / 360 * sourceWidth, 0, sourceWidth - 1);
+                var sourceY = (int)Math.Clamp((90 - latitude) / 180 * sourceHeight, 0, sourceHeight - 1);
+                var sourceIndex = (sourceY * sourceWidth + sourceX) * 4;
+                var targetIndex = (py * size + px) * 4;
+                pixels[targetIndex] = _earthMap[sourceIndex];
+                pixels[targetIndex + 1] = _earthMap[sourceIndex + 1];
+                pixels[targetIndex + 2] = _earthMap[sourceIndex + 2];
+                pixels[targetIndex + 3] = 255;
+            }
+        }
+
+        using (var framebuffer = _earthFrame.Lock())
+            Marshal.Copy(pixels, 0, framebuffer.Address, pixels.Length);
+        _earthFrameYaw = _yaw;
+        _earthFramePitch = _pitch;
+        context.DrawImage(_earthFrame, new Rect(0, 0, size, size), new Rect(center.X - radius, center.Y - radius, radius * 2, radius * 2));
     }
 
     private Point? Project(double longitude, double latitude, Point center, double radius)

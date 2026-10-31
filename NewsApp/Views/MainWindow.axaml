@@ -21,8 +21,10 @@
     <Style Selector="Border.newsPanel"><Setter Property="Background" Value="#D90B1422"/><Setter Property="BorderBrush" Value="#805E7898"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="24,0,0,24"/><Setter Property="BoxShadow" Value="-16 0 50 0 #AA000000"/></Style>
     <Style Selector="Button.panelHandle"><Setter Property="Background" Value="#B51A2B43"/><Setter Property="BorderBrush" Value="#886A9CC0"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="#EAF5FF"/><Setter Property="Padding" Value="7,16"/><Setter Property="Height" Value="58"/><Setter Property="Width" Value="52"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
     <Style Selector="Button.panelHandle:pointerover"><Setter Property="Background" Value="#DD2A5B85"/><Setter Property="BorderBrush" Value="#CC9EDBFF"/></Style>
-    <Style Selector="Button.refreshMain"><Setter Property="Background" Value="#C42A75B8"/><Setter Property="BorderBrush" Value="#887FBEE8"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="MinWidth" Value="52"/><Setter Property="Padding" Value="14,0"/></Style>
-    <Style Selector="Button.refreshMore"><Setter Property="Background" Value="#B51D5687"/><Setter Property="BorderBrush" Value="#887FBEE8"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="White"/><Setter Property="Height" Value="42"/><Setter Property="Width" Value="34"/><Setter Property="Padding" Value="0"/></Style>
+    <Style Selector="Button.refreshMain"><Setter Property="Background" Value="#C4141D2A"/><Setter Property="BorderBrush" Value="#99677D96"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="#F1F7FF"/><Setter Property="Height" Value="46"/><Setter Property="Width" Value="54"/><Setter Property="Padding" Value="0"/><Setter Property="CornerRadius" Value="11,0,0,11"/></Style>
+    <Style Selector="Button.refreshMain:pointerover"><Setter Property="Background" Value="#DD26384D"/><Setter Property="BorderBrush" Value="#CCB3D8F2"/></Style>
+    <Style Selector="Button.refreshMore"><Setter Property="Background" Value="#B4141D2A"/><Setter Property="BorderBrush" Value="#99677D96"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="#C7D8E8"/><Setter Property="Height" Value="46"/><Setter Property="Width" Value="34"/><Setter Property="Padding" Value="0"/><Setter Property="CornerRadius" Value="0,11,11,0"/></Style>
+    <Style Selector="Button.refreshMore:pointerover"><Setter Property="Background" Value="#DD26384D"/><Setter Property="BorderBrush" Value="#CCB3D8F2"/></Style>
     <Style Selector="Button.articleNav"><Setter Property="Background" Value="#B5121927"/><Setter Property="BorderBrush" Value="#99677D96"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="13"/><Setter Property="Width" Value="52"/><Setter Property="Height" Value="52"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="Button.articleNav:pointerover"><Setter Property="Background" Value="#DD26384D"/><Setter Property="BorderBrush" Value="#CCB3D8F2"/></Style>
   </Window.Styles>
@@ -55,10 +57,10 @@
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="0" VerticalAlignment="Top">
               <Button x:Name="RefreshButton" Classes="refreshMain" Command="{Binding RefreshCommand}" ToolTip.Tip="Обновить через API" CornerRadius="9,0,0,9" IsEnabled="{Binding !IsRefreshing}">
-                <PathIcon x:Name="RefreshIcon" Data="M 21,10 A 9,9 0 1 0 18,18 L 14,14 L 21,14 Z" Width="20" Height="20" Foreground="#F6FAFF"/>
+                <Path x:Name="RefreshIcon" Data="M 19,9 C 16,3 8,3 5,9 M 5,9 V 4 M 5,9 H 10 M 5,15 C 8,21 16,21 19,15 M 19,15 V 20 M 19,15 H 14" Width="25" Height="25" Stretch="Uniform" Stroke="#F1F7FF" StrokeThickness="2.2" StrokeLineCap="Round"/>
               </Button>
               <Button Classes="refreshMore" ToolTip.Tip="Выбрать способ обновления" CornerRadius="0,9,9,0" IsEnabled="{Binding !IsRefreshing}">
-                <TextBlock Text="⌄" FontSize="17" FontWeight="Bold"/>
+                <Path Data="M 7,9 L 12,14 L 17,9" Width="15" Height="15" Stretch="Uniform" Stroke="#C7D8E8" StrokeThickness="2" StrokeLineCap="Round"/>
                 <Button.Flyout>
                   <MenuFlyout>
                     <MenuItem Header="Показать из базы" Command="{Binding LoadCacheCommand}"/>
@@ -95,8 +97,8 @@
           </ScrollViewer>
           <Grid Grid.Row="2" IsVisible="{Binding IsReadingArticle}" ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Top">
-              <Button Classes="articleNav" ToolTip.Tip="Назад к новостям" Command="{Binding CloseArticleCommand}"><PathIcon Data="M 20,10 H 9 L 13,6 L 10,3 L 2,12 L 10,21 L 13,18 L 9,14 H 20 Z" Width="26" Height="26" Foreground="#F1F7FF"/></Button>
-              <Button Classes="articleNav" ToolTip.Tip="В начало статьи" Click="OnArticleScrollToTop"><PathIcon Data="M 12,2 L 3,10 L 6,13 L 10,9 V 20 H 14 V 9 L 18,13 L 21,10 Z" Width="26" Height="26" Foreground="#F1F7FF"/></Button>
+              <Button Classes="articleNav" ToolTip.Tip="Назад к новостям" Command="{Binding CloseArticleCommand}"><Path Data="M 20,13 H 5 M 5,13 L 12,6 M 5,13 L 12,20" Width="28" Height="28" Stretch="Uniform" Stroke="#F1F7FF" StrokeThickness="4.5" StrokeLineCap="Round"/></Button>
+              <Button Classes="articleNav" ToolTip.Tip="В начало статьи" Click="OnArticleScrollToTop"><Path Data="M 11,20 V 5 M 11,5 L 4,12 M 11,5 L 18,12" Width="28" Height="28" Stretch="Uniform" Stroke="#F1F7FF" StrokeThickness="4.5" StrokeLineCap="Round"/></Button>
             </StackPanel>
             <ScrollViewer x:Name="ArticleScrollViewer" Grid.Column="1" VerticalScrollBarVisibility="Auto">
               <Border Background="#D90E1827" BorderBrush="#806482A0" BorderThickness="1" CornerRadius="20" Padding="28" HorizontalAlignment="Center" MaxWidth="900" BoxShadow="0 12 36 0 #88000000">

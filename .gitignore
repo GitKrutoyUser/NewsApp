@@ -11,6 +11,8 @@
 **/world_news.db
 **/world_news.db-shm
 **/world_news.db-wal
+.env
+**/.env
 
 # Archives and generated platform packages
 *.zip

@@ -11,7 +11,6 @@ namespace NewsApp.Services;
 public sealed class NewsService
 {
     private const string ApiUrl = "https://freenewsapi.ai/v1/search?lang=ru";
-    private const string CourseworkApiKey = "d5a7f1622d72214ba590c3b721436728cfdc8c4b6ea87a9611d8f0e56761e0a5";
     private const string LunarFeedUrl = "https://www.nasa.gov/missions/artemis/feed/";
     private static readonly XNamespace ContentNamespace = "http://purl.org/rss/1.0/modules/content/";
     private static readonly string[] WorldCountryCodes = { "US", "RU", "DE", "FR", "GB", "CN", "JP", "IN", "BR", "CA", "AU", "IT", "ES", "TR", "KR", "MX", "PL", "NL", "SE", "CH", "IL", "UA", "ZA" };
@@ -23,8 +22,11 @@ public sealed class NewsService
     {
         _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("WorldPulse/1.0");
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", CourseworkApiKey);
+        DotNetEnv.Env.Load();
+        var apiKey = Environment.GetEnvironmentVariable("FREENEWSAPI_API_KEY");
+        if (!string.IsNullOrWhiteSpace(apiKey))
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
     }
 
     public async Task<IReadOnlyList<NewsArticle>> FetchNewsAsync(CancellationToken cancellationToken = default)

@@ -50,6 +50,8 @@ public sealed class NewsApiItem
     [JsonPropertyName("tld")] public string? Tld { get; set; }
     [JsonPropertyName("lang")] public string? Language { get; set; }
     [JsonPropertyName("image")] public string? Image { get; set; }
+    [JsonPropertyName("image_url")] public string? ImageUrl { get; set; }
+    [JsonPropertyName("imageUrl")] public string? ImageUrlCamelCase { get; set; }
 }
 
 public sealed class ArticleContent

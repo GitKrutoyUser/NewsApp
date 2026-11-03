@@ -15,6 +15,7 @@ public sealed class NewsService
     private static readonly XNamespace ContentNamespace = "http://purl.org/rss/1.0/modules/content/";
     private static readonly string[] WorldCountryCodes = { "US", "RU", "DE", "FR", "GB", "CN", "JP", "IN", "BR", "CA", "AU", "IT", "ES", "TR", "KR", "MX", "PL", "NL", "SE", "CH", "IL", "UA", "ZA" };
     private readonly HttpClient _httpClient;
+    public string? LastApiError { get; private set; }
 
     static NewsService() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
@@ -43,6 +44,7 @@ public sealed class NewsService
 
     public async Task<IReadOnlyList<NewsArticle>> FetchNewsAsync(CancellationToken cancellationToken = default)
     {
+        LastApiError = null;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(90));
         var requestToken = timeout.Token;
@@ -236,7 +238,11 @@ public sealed class NewsService
                     await Task.Delay(TimeSpan.FromMilliseconds(500 * (attempt + 1)), cancellationToken);
                     continue;
                 }
-                if (!response.IsSuccessStatusCode) return new List<NewsApiItem>();
+                if (!response.IsSuccessStatusCode)
+                {
+                    LastApiError = await GetApiErrorAsync(response, cancellationToken);
+                    return new List<NewsApiItem>();
+                }
                 await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
                 return result?.Results ?? new List<NewsApiItem>();
@@ -249,6 +255,17 @@ public sealed class NewsService
             catch (HttpRequestException) { return new List<NewsApiItem>(); }
         }
         return new List<NewsApiItem>();
+    }
+
+    private static async Task<string> GetApiErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var details = await response.Content.ReadAsStringAsync(cancellationToken);
+        return response.StatusCode switch
+        {
+            HttpStatusCode.Unauthorized => "API отклонил ключ (401). Проверь FREENEWSAPI_API_KEY в .env.",
+            HttpStatusCode.Forbidden => "API запретил доступ (403). Проверь тариф или ключ.",
+            _ => $"API вернул {(int)response.StatusCode}: {details[..Math.Min(details.Length, 120)]}"
+        };
     }
 
     private static NewsArticle? ToArticle(NewsApiItem item)

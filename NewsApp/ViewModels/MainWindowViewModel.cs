@@ -153,7 +153,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             });
             await LoadCachedNewsAsync(SelectedCountry.Code);
             await SetUiAsync(() => StatusText = news.Count == 0
-                ? "API не вернул новости · показываем локальную базу"
+                ? _service.LastApiError ?? "API не вернул новости · проверь фильтры и ключ в .env"
                 : $"Обновлено: {DateTime.Now:HH:mm} · {news.Count} материалов");
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }

@@ -137,7 +137,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             }
             await SetUiAsync(() => { IsRefreshing = true; StatusText = "Новости обновляются"; });
             var fetchedNews = await _service.FetchNewsAsync(_lifetime.Token);
-            var news = await _service.CompleteDescriptionsAsync(fetchedNews, _lifetime.Token);
+            var news = fetchedNews
+                .Where(x => !string.IsNullOrWhiteSpace(x.Description))
+                .ToList();
             await Task.Run(() => _repository.DeleteNewsByCountry("MOON"), _lifetime.Token);
             var knownUrls = await Task.Run(() => _repository.GetKnownUrls(), _lifetime.Token);
             var newCountries = news.Where(x => !knownUrls.Contains(x.Url)).Select(x => x.CountryCode)

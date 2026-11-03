@@ -11,6 +11,7 @@ namespace NewsApp.Services;
 public sealed class NewsService
 {
     private const string ApiUrl = "https://freenewsapi.ai/v1/search?lang=ru";
+    private const string BundledApiKey = "fna_live_ovseKv-3n6bJITy1BJMplVoLRSdggNkySyn9ASMYTds";
     private const string LunarFeedUrl = "https://www.nasa.gov/missions/artemis/feed/";
     private static readonly XNamespace ContentNamespace = "http://purl.org/rss/1.0/modules/content/";
     private static readonly string[] WorldCountryCodes = { "US", "RU", "DE", "FR", "GB", "CN", "JP", "IN", "BR", "CA", "AU", "IT", "ES", "TR", "KR", "MX", "PL", "NL", "SE", "CH", "IL", "UA", "ZA" };
@@ -23,26 +24,8 @@ public sealed class NewsService
     {
         _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("WorldPulse/1.0");
-        LoadLocalEnvironment();
-        var apiKey = Environment.GetEnvironmentVariable("FREENEWSAPI_API_KEY")?.Trim().Trim('"', '\'');
-        if (!string.IsNullOrWhiteSpace(apiKey))
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
-    }
-
-    private static void LoadLocalEnvironment()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        var paths = new List<string>();
-        for (var level = 0; directory is not null && level < 8; level++, directory = directory.Parent)
-        {
-            var envPath = Path.Combine(directory.FullName, ".env");
-            if (File.Exists(envPath) && !paths.Contains(envPath, StringComparer.OrdinalIgnoreCase))
-                paths.Add(envPath);
-        }
-
-        foreach (var envPath in paths)
-            DotNetEnv.Env.Load(envPath);
+        _httpClient.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", BundledApiKey);
     }
 
     public async Task<IReadOnlyList<NewsArticle>> FetchNewsAsync(CancellationToken cancellationToken = default)

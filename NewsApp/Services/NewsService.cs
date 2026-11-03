@@ -22,11 +22,23 @@ public sealed class NewsService
     {
         _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("WorldPulse/1.0");
-        DotNetEnv.Env.Load();
+        LoadLocalEnvironment();
         var apiKey = Environment.GetEnvironmentVariable("FREENEWSAPI_API_KEY");
         if (!string.IsNullOrWhiteSpace(apiKey))
             _httpClient.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+    }
+
+    private static void LoadLocalEnvironment()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        for (var level = 0; directory is not null && level < 6; level++, directory = directory.Parent)
+        {
+            var envPath = Path.Combine(directory.FullName, ".env");
+            if (!File.Exists(envPath)) continue;
+            DotNetEnv.Env.Load(envPath);
+            return;
+        }
     }
 
     public async Task<IReadOnlyList<NewsArticle>> FetchNewsAsync(CancellationToken cancellationToken = default)

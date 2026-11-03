@@ -13,6 +13,8 @@
 **/world_news.db-wal
 .env
 **/.env
+API_KEY.txt
+**/API_KEY.txt
 
 # Archives and generated platform packages
 *.zip

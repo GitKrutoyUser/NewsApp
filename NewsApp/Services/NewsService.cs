@@ -24,7 +24,7 @@ public sealed class NewsService
         _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("WorldPulse/1.0");
         LoadLocalEnvironment();
-        var apiKey = Environment.GetEnvironmentVariable("FREENEWSAPI_API_KEY");
+        var apiKey = Environment.GetEnvironmentVariable("FREENEWSAPI_API_KEY")?.Trim().Trim('"', '\'');
         if (!string.IsNullOrWhiteSpace(apiKey))
             _httpClient.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
@@ -33,13 +33,16 @@ public sealed class NewsService
     private static void LoadLocalEnvironment()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        for (var level = 0; directory is not null && level < 6; level++, directory = directory.Parent)
+        var paths = new List<string>();
+        for (var level = 0; directory is not null && level < 8; level++, directory = directory.Parent)
         {
             var envPath = Path.Combine(directory.FullName, ".env");
-            if (!File.Exists(envPath)) continue;
-            DotNetEnv.Env.Load(envPath);
-            return;
+            if (File.Exists(envPath) && !paths.Contains(envPath, StringComparer.OrdinalIgnoreCase))
+                paths.Add(envPath);
         }
+
+        foreach (var envPath in paths)
+            DotNetEnv.Env.Load(envPath);
     }
 
     public async Task<IReadOnlyList<NewsArticle>> FetchNewsAsync(CancellationToken cancellationToken = default)

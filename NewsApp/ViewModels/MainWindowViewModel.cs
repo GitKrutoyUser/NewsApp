@@ -17,6 +17,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly NewsRepository _repository;
     private readonly NewsService _service;
     private readonly System.Timers.Timer _refreshTimer;
+    private readonly DispatcherTimer _searchTimer;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
 
@@ -72,6 +73,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _repository = repository;
         _service = service;
         _selectedCountry = Countries[0];
+        _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
+        _searchTimer.Tick += (_, _) =>
+        {
+            _searchTimer.Stop();
+            ApplyArticleFilter();
+        };
         _refreshTimer = new System.Timers.Timer(TimeSpan.FromMinutes(30).TotalMilliseconds) { AutoReset = true };
         _refreshTimer.Elapsed += OnTimerElapsed;
         _refreshTimer.Start();
@@ -80,7 +87,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     partial void OnSelectedCountryChanged(Country value) => _ = LoadCachedNewsAsync(value.Code);
 
-    partial void OnSearchTextChanged(string value) => ApplyArticleFilter();
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchTimer.Stop();
+        _searchTimer.Start();
+    }
 
     private void ApplyArticleFilter()
     {
@@ -315,6 +326,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         _refreshTimer.Stop();
         _refreshTimer.Dispose();
+        _searchTimer.Stop();
         _lifetime.Cancel();
         _lifetime.Dispose();
         _refreshGate.Dispose();

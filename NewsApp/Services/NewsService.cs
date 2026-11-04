@@ -18,6 +18,7 @@ public sealed class NewsService
     private static readonly XNamespace ContentNamespace = "http://purl.org/rss/1.0/modules/content/";
     private static readonly string[] WorldCountryCodes = { "US", "RU", "DE", "FR", "GB", "CN", "JP", "IN", "BR", "CA", "AU", "IT", "ES", "TR", "KR", "MX", "PL", "NL", "SE", "CH", "IL", "UA", "ZA" };
     private readonly HttpClient _httpClient;
+    private readonly HttpClient _contentClient;
     public string? LastApiError { get; private set; }
 
     static NewsService() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -28,6 +29,9 @@ public sealed class NewsService
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("WorldPulse/1.0");
         _httpClient.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", BundledApiKey);
+        _contentClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        _contentClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 WorldPulse/1.0");
+        _contentClient.DefaultRequestHeaders.AcceptLanguage.ParseAdd("ru-RU,ru;q=0.9,en;q=0.8");
     }
 
     public async Task<IReadOnlyList<NewsArticle>> FetchNewsAsync(CancellationToken cancellationToken = default)
@@ -146,7 +150,7 @@ public sealed class NewsService
             request.Headers.Accept.ParseAdd("image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
             if (Uri.TryCreate(referer, UriKind.Absolute, out var refererUri))
                 request.Headers.Referrer = refererUri;
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            using var response = await _contentClient.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode) return null;
             var bytes = await ReadBytesUpToAsync(response.Content, MaxImageBytes, cancellationToken);
             return bytes is { Length: > 0 } ? new Bitmap(new MemoryStream(bytes)) : null;
@@ -170,7 +174,7 @@ public sealed class NewsService
         timeout.CancelAfter(TimeSpan.FromSeconds(5));
         try
         {
-            using var response = await _httpClient.GetAsync(articleUri, timeout.Token);
+            using var response = await _contentClient.GetAsync(articleUri, timeout.Token);
             if (!response.IsSuccessStatusCode) return null;
             var bytes = await ReadBytesUpToAsync(response.Content, MaxHtmlBytes, timeout.Token);
             if (bytes is null) return null;
@@ -289,7 +293,7 @@ public sealed class NewsService
         if (!IsHttpUri(uri)) return null;
         try
         {
-            using var response = await _httpClient.GetAsync(uri, cancellationToken);
+            using var response = await _contentClient.GetAsync(uri, cancellationToken);
             if (!response.IsSuccessStatusCode) return null;
             var bytes = await ReadBytesUpToAsync(response.Content, MaxHtmlBytes, cancellationToken);
             if (bytes is null) return null;
@@ -343,7 +347,7 @@ public sealed class NewsService
         if (!Uri.TryCreate(articleUrl, UriKind.Absolute, out var articleUri) || !IsHttpUri(articleUri)) return null;
         try
         {
-            using var response = await _httpClient.GetAsync(articleUri, cancellationToken);
+            using var response = await _contentClient.GetAsync(articleUri, cancellationToken);
             if (!response.IsSuccessStatusCode) return null;
             var bytes = await ReadBytesUpToAsync(response.Content, MaxHtmlBytes, cancellationToken);
             if (bytes is null) return null;

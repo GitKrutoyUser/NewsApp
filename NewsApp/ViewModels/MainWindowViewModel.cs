@@ -230,7 +230,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            if (Uri.TryCreate(article.Url, UriKind.Absolute, out var uri))
+            if (Uri.TryCreate(article.Url, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
                 Process.Start(new ProcessStartInfo(uri.ToString()) { UseShellExecute = true });
         }
         catch (Exception exception) { Debug.WriteLine($"Open article in browser failed: {exception}"); }

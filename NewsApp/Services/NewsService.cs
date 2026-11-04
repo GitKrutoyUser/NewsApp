@@ -12,6 +12,8 @@ public sealed class NewsService
 {
     private const string ApiUrl = "https://freenewsapi.ai/v1/search?lang=ru";
     private const string BundledApiKey = "fna_live_ovseKv-3n6bJITy1BJMplVoLRSdggNkySyn9ASMYTds";
+    private const int MaxImageBytes = 10 * 1024 * 1024;
+    private const int MaxHtmlBytes = 5 * 1024 * 1024;
     private const string LunarFeedUrl = "https://www.nasa.gov/missions/artemis/feed/";
     private static readonly XNamespace ContentNamespace = "http://purl.org/rss/1.0/modules/content/";
     private static readonly string[] WorldCountryCodes = { "US", "RU", "DE", "FR", "GB", "CN", "JP", "IN", "BR", "CA", "AU", "IT", "ES", "TR", "KR", "MX", "PL", "NL", "SE", "CH", "IL", "UA", "ZA" };
@@ -137,6 +139,7 @@ public sealed class NewsService
     public async Task<Bitmap?> DownloadImageAsync(string? imageUrl, string? referer, CancellationToken cancellationToken = default)
     {
         if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri)) return null;
+        if (!IsHttpUri(uri)) return null;
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
@@ -145,8 +148,8 @@ public sealed class NewsService
                 request.Headers.Referrer = refererUri;
             using var response = await _httpClient.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode) return null;
-            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-            return bytes.Length == 0 ? null : new Bitmap(new MemoryStream(bytes));
+            var bytes = await ReadBytesUpToAsync(response.Content, MaxImageBytes, cancellationToken);
+            return bytes is { Length: > 0 } ? new Bitmap(new MemoryStream(bytes)) : null;
         }
         catch (HttpRequestException) { return null; }
         catch (TaskCanceledException) { return null; }
@@ -162,13 +165,15 @@ public sealed class NewsService
 
     public async Task<string?> FindArticleDescriptionAsync(string articleUrl, CancellationToken cancellationToken = default)
     {
+        if (!Uri.TryCreate(articleUrl, UriKind.Absolute, out var articleUri) || !IsHttpUri(articleUri)) return null;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(5));
         try
         {
-            using var response = await _httpClient.GetAsync(articleUrl, timeout.Token);
+            using var response = await _httpClient.GetAsync(articleUri, timeout.Token);
             if (!response.IsSuccessStatusCode) return null;
-            var bytes = await response.Content.ReadAsByteArrayAsync(timeout.Token);
+            var bytes = await ReadBytesUpToAsync(response.Content, MaxHtmlBytes, timeout.Token);
+            if (bytes is null) return null;
             var charset = response.Content.Headers.ContentType?.CharSet?.Trim('"', '\'');
             Encoding encoding;
             try { encoding = string.IsNullOrWhiteSpace(charset) ? Encoding.UTF8 : Encoding.GetEncoding(charset); }
@@ -281,11 +286,13 @@ public sealed class NewsService
     public async Task<ArticleContent?> DownloadArticleAsync(string articleUrl, CancellationToken cancellationToken = default)
     {
         if (!Uri.TryCreate(articleUrl, UriKind.Absolute, out var uri)) return null;
+        if (!IsHttpUri(uri)) return null;
         try
         {
             using var response = await _httpClient.GetAsync(uri, cancellationToken);
             if (!response.IsSuccessStatusCode) return null;
-            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            var bytes = await ReadBytesUpToAsync(response.Content, MaxHtmlBytes, cancellationToken);
+            if (bytes is null) return null;
             var charset = response.Content.Headers.ContentType?.CharSet?.Trim('"', '\'');
             Encoding encoding;
             try { encoding = string.IsNullOrWhiteSpace(charset) ? Encoding.UTF8 : Encoding.GetEncoding(charset); }
@@ -333,11 +340,13 @@ public sealed class NewsService
 
     private async Task<string?> TryGetOgImageAsync(string articleUrl, CancellationToken cancellationToken)
     {
+        if (!Uri.TryCreate(articleUrl, UriKind.Absolute, out var articleUri) || !IsHttpUri(articleUri)) return null;
         try
         {
-            using var response = await _httpClient.GetAsync(articleUrl, cancellationToken);
+            using var response = await _httpClient.GetAsync(articleUri, cancellationToken);
             if (!response.IsSuccessStatusCode) return null;
-            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            var bytes = await ReadBytesUpToAsync(response.Content, MaxHtmlBytes, cancellationToken);
+            if (bytes is null) return null;
             var charset = response.Content.Headers.ContentType?.CharSet?.Trim('"', '\'');
             Encoding encoding;
             try { encoding = string.IsNullOrWhiteSpace(charset) ? Encoding.UTF8 : Encoding.GetEncoding(charset); }
@@ -371,6 +380,26 @@ public sealed class NewsService
         if (string.IsNullOrWhiteSpace(image)) return null;
         image = WebUtility.HtmlDecode(image);
         return Uri.TryCreate(new Uri(baseUrl), image, out var absolute) ? absolute.ToString() : image;
+    }
+
+    private static bool IsHttpUri(Uri uri) =>
+        uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
+
+    private static async Task<byte[]?> ReadBytesUpToAsync(HttpContent content, int maxBytes, CancellationToken cancellationToken)
+    {
+        if (content.Headers.ContentLength > maxBytes) return null;
+        await using var input = await content.ReadAsStreamAsync(cancellationToken);
+        await using var output = new MemoryStream();
+        var buffer = new byte[81920];
+        var total = 0;
+        int read;
+        while ((read = await input.ReadAsync(buffer, cancellationToken)) > 0)
+        {
+            total += read;
+            if (total > maxBytes) return null;
+            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+        }
+        return output.ToArray();
     }
 
     private static DateTimeOffset ParseDate(string? value) =>

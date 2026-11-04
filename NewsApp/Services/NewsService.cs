@@ -354,11 +354,20 @@ public sealed class NewsService
             var html = encoding.GetString(bytes);
             var document = new HtmlDocument();
             document.LoadHtml(html);
-            var node = document.DocumentNode.SelectSingleNode(
-                "//meta[contains(translate(@property,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'og:image')]" +
-                " | //meta[contains(translate(@name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'twitter:image')]" +
-                " | //link[contains(translate(@rel,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'image_src')]");
-            var image = node?.GetAttributeValue("content", string.Empty) ?? node?.GetAttributeValue("href", string.Empty);
+            var image = document.DocumentNode.SelectNodes("//meta | //link")?
+                .Select(node =>
+                {
+                    var property = node.GetAttributeValue("property", string.Empty);
+                    var name = node.GetAttributeValue("name", string.Empty);
+                    var rel = node.GetAttributeValue("rel", string.Empty);
+                    var key = $"{property} {name} {rel}".ToLowerInvariant();
+                    if (!key.Contains("og:image") && !key.Contains("twitter:image") && !key.Contains("image_src"))
+                        return null;
+                    return FirstNonEmpty(
+                        node.GetAttributeValue("content", string.Empty).Trim(),
+                        node.GetAttributeValue("href", string.Empty).Trim());
+                })
+                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
             if (string.IsNullOrWhiteSpace(image))
             {
                 var imageNode = document.DocumentNode.SelectSingleNode("//article//img | //main//img | //img");
@@ -366,7 +375,9 @@ public sealed class NewsService
                 {
                     imageNode?.GetAttributeValue("src", string.Empty),
                     imageNode?.GetAttributeValue("data-src", string.Empty),
-                    imageNode?.GetAttributeValue("data-lazy-src", string.Empty)
+                    imageNode?.GetAttributeValue("data-lazy-src", string.Empty),
+                    imageNode?.GetAttributeValue("data-original", string.Empty),
+                    imageNode?.GetAttributeValue("srcset", string.Empty)?.Split(',').FirstOrDefault()?.Trim().Split(' ').FirstOrDefault()
                 }.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
             }
             return MakeAbsoluteUrl(articleUrl, image);
@@ -384,6 +395,9 @@ public sealed class NewsService
 
     private static bool IsHttpUri(Uri uri) =>
         uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
+
+    private static string FirstNonEmpty(string value, string fallback) =>
+        string.IsNullOrWhiteSpace(value) ? fallback : value;
 
     private static async Task<byte[]?> ReadBytesUpToAsync(HttpContent content, int maxBytes, CancellationToken cancellationToken)
     {

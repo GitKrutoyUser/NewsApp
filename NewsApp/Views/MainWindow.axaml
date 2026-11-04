@@ -13,12 +13,12 @@
     <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="#A8B8CC"/><Setter Property="FontSize" Value="13"/></Style>
     <Style Selector="Button.country"><Setter Property="Background" Value="Transparent"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="14,11"/><Setter Property="Margin" Value="0,2"/></Style>
     <Style Selector="Button.country:pointerover"><Setter Property="Background" Value="#442D5C82"/></Style>
-    <Style Selector="Border.card"><Setter Property="Background" Value="#B8141E2D"/><Setter Property="BorderBrush" Value="#665F82A2"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="18"/><Setter Property="Padding" Value="16,16,16,10"/><Setter Property="Margin" Value="0,0,0,12"/><Setter Property="BoxShadow" Value="0 8 24 0 #55000000"/></Style>
+    <Style Selector="Border.card"><Setter Property="Background" Value="#B8141E2D"/><Setter Property="BorderBrush" Value="#665F82A2"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="18"/><Setter Property="Padding" Value="16,16,16,10"/><Setter Property="Margin" Value="0,0,0,12"/><Setter Property="BoxShadow" Value="0 6 18 0 #33000000"/></Style>
     <Style Selector="Border.card:pointerover"><Setter Property="Background" Value="#CC19283A"/><Setter Property="BorderBrush" Value="#AA83C9F5"/></Style>
     <Style Selector="Button.link"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#8ECFFF"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="Button.articleTitle"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#F4F7FB"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="TextBlock.toolbarIcon"><Setter Property="Foreground" Value="#F6FAFF"/><Setter Property="FontSize" Value="21"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
-    <Style Selector="Border.newsPanel"><Setter Property="Background" Value="#D90B1422"/><Setter Property="BorderBrush" Value="#805E7898"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="24,0,0,24"/><Setter Property="BoxShadow" Value="-16 0 50 0 #AA000000"/></Style>
+    <Style Selector="Border.newsPanel"><Setter Property="Background" Value="#D90B1422"/><Setter Property="BorderBrush" Value="#805E7898"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="24,0,0,24"/><Setter Property="BoxShadow" Value="-12 0 32 0 #66000000"/></Style>
     <Style Selector="Button.panelHandle"><Setter Property="Background" Value="#B51A2B43"/><Setter Property="BorderBrush" Value="#886A9CC0"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="#EAF5FF"/><Setter Property="Padding" Value="7,16"/><Setter Property="Height" Value="58"/><Setter Property="Width" Value="52"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
     <Style Selector="Button.panelHandle:pointerover"><Setter Property="Background" Value="#DD2A5B85"/><Setter Property="BorderBrush" Value="#CC9EDBFF"/></Style>
     <Style Selector="Button.refreshMain"><Setter Property="Background" Value="#C4141D2A"/><Setter Property="BorderBrush" Value="#99677D96"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="#F1F7FF"/><Setter Property="Height" Value="46"/><Setter Property="Width" Value="54"/><Setter Property="Padding" Value="0"/><Setter Property="CornerRadius" Value="11,0,0,11"/></Style>
@@ -33,7 +33,7 @@
     <controls:StarfieldControl/>
     <controls:GlobeControl x:Name="Globe" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="18"/>
 
-    <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="28,0,0,28" Background="#99101929" BorderBrush="#665D7896" BorderThickness="1" CornerRadius="18" Padding="16,10" BoxShadow="0 10 28 0 #77000000">
+    <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="28,0,0,28" Background="#99101929" BorderBrush="#665D7896" BorderThickness="1" CornerRadius="18" Padding="16,10" BoxShadow="0 8 22 0 #44000000">
       <StackPanel Spacing="7">
         <TextBlock Text="{Binding SelectedCountry.DisplayName}" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Foreground="#F4F7FB"/>
           <Button x:Name="AutoRotationButton" ToolTip.Tip="Автоповорот глобуса" Click="OnAutoRotationClick" HorizontalAlignment="Center" Padding="14,8" Background="#C41B4F7A" BorderBrush="#887FBEE8" BorderThickness="1" Foreground="White" CornerRadius="9">
@@ -55,7 +55,7 @@
                 <TextBlock Text="{Binding SelectedCountry.DisplayName}" Classes="title"/>
                 <TextBlock Text="{Binding SelectedCountry.NewNewsMarker}" Foreground="#FFCA4B" FontSize="24" VerticalAlignment="Center"/>
               </StackPanel>
-              <TextBlock Text="Свежие события из локального кэша WorldPulse" Classes="muted" Margin="0,6,0,0"/>
+              <TextBlock Text="Последние новости" Classes="muted" Margin="0,6,0,0"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="0" VerticalAlignment="Top">
               <Button x:Name="RefreshButton" Classes="refreshMain" Command="{Binding RefreshCommand}" ToolTip.Tip="Обновить через API" CornerRadius="9,0,0,9" IsEnabled="{Binding !IsRefreshing}">

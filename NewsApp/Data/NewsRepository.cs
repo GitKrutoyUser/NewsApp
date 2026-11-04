@@ -40,6 +40,9 @@ public sealed class NewsRepository
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
+        using var pragmas = connection.CreateCommand();
+        pragmas.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;";
+        pragmas.ExecuteNonQuery();
         using var command = connection.CreateCommand();
         command.CommandText = """
             CREATE TABLE IF NOT EXISTS news (
@@ -53,6 +56,8 @@ public sealed class NewsRepository
             );
             CREATE INDEX IF NOT EXISTS ix_news_country_published
                 ON news(country_code, published_at DESC);
+            CREATE INDEX IF NOT EXISTS ix_news_title
+                ON news(title COLLATE NOCASE);
             CREATE TABLE IF NOT EXISTS app_state (
                 state_key TEXT PRIMARY KEY,
                 state_value TEXT NOT NULL

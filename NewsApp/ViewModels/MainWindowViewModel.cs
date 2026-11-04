@@ -52,12 +52,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<NewsArticle> Articles { get; } = new();
     public ObservableCollection<string> OpenedArticleParagraphs { get; } = new();
+    private IReadOnlyList<NewsArticle> _loadedArticles = Array.Empty<NewsArticle>();
 
     [ObservableProperty] private Country _selectedCountry;
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isLoading = true;
     [ObservableProperty] private bool _isNewsPaneVisible = true;
     [ObservableProperty] private string _statusText = "Проверяем локальный кэш…";
+    [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private bool _isReadingArticle;
     [ObservableProperty] private NewsArticle? _openedArticle;
     [ObservableProperty] private string _openedArticleText = string.Empty;
@@ -77,6 +79,22 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     partial void OnSelectedCountryChanged(Country value) => _ = LoadCachedNewsAsync(value.Code);
+
+    partial void OnSearchTextChanged(string value) => ApplyArticleFilter();
+
+    private void ApplyArticleFilter()
+    {
+        var query = SearchText.Trim();
+        var filtered = string.IsNullOrWhiteSpace(query)
+            ? _loadedArticles
+            : _loadedArticles.Where(x =>
+                x.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                x.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                x.CountryName.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        Articles.Clear();
+        foreach (var article in filtered) Articles.Add(article);
+    }
 
     public void SelectCountryCode(string code)
     {
@@ -246,8 +264,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var items = await Task.Run(() => _repository.GetNewsByCountry(countryCode), _lifetime.Token);
             await SetUiAsync(() =>
             {
-                Articles.Clear();
-                foreach (var article in items) Articles.Add(article);
+                _loadedArticles = items;
+                ApplyArticleFilter();
                 if (!IsRefreshing && items.Count == 0)
                     StatusText = "пока что нет новостей для этой страны";
             });
@@ -271,7 +289,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 CancellationToken = _lifetime.Token
             }, async (article, token) =>
             {
-                var metadataChanged = false;
                 var bitmap = await _service.DownloadImageAsync(article.ImageUrl, article.Url, token);
                 if (bitmap is null)
                 {
@@ -283,17 +300,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                         bitmap = await _service.DownloadImageAsync(fallbackImageUrl, article.Url, token);
                     }
                 }
-                if (string.IsNullOrWhiteSpace(article.Description))
-                {
-                    var description = await _service.FindArticleDescriptionAsync(article.Url, token);
-                    if (!string.IsNullOrWhiteSpace(description))
-                    {
-                        article.Description = description;
-                        metadataChanged = true;
-                    }
-                }
-                if (metadataChanged)
-                    await Task.Run(() => _repository.SaveNews(new[] { article }), token);
                 if (bitmap is not null)
                     await SetUiAsync(() => article.ImageBitmap = bitmap);
             });

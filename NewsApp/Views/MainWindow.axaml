@@ -27,6 +27,7 @@
     <Style Selector="Button.refreshMore:pointerover"><Setter Property="Background" Value="#DD26384D"/><Setter Property="BorderBrush" Value="#CCB3D8F2"/></Style>
     <Style Selector="Button.articleNav"><Setter Property="Background" Value="#B5121927"/><Setter Property="BorderBrush" Value="#99677D96"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="13"/><Setter Property="Width" Value="52"/><Setter Property="Height" Value="52"/><Setter Property="Padding" Value="0"/></Style>
     <Style Selector="Button.articleNav:pointerover"><Setter Property="Background" Value="#DD26384D"/><Setter Property="BorderBrush" Value="#CCB3D8F2"/></Style>
+    <Style Selector="TextBox.newsSearch"><Setter Property="Background" Value="#99111D2B"/><Setter Property="Foreground" Value="#F1F7FF"/><Setter Property="BorderBrush" Value="#806A8EAB"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="12,7"/><Setter Property="WatermarkForeground" Value="#8EA3B8"/></Style>
   </Window.Styles>
   <Grid x:Name="MainLayout">
     <controls:StarfieldControl/>
@@ -49,6 +50,7 @@
         <Grid x:Name="NewsContent" Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="0,12,12,12" IsVisible="False" Opacity="1">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel>
+              <TextBox Classes="newsSearch" Width="260" PlaceholderText="Поиск по новостям" Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <TextBlock Text="{Binding SelectedCountry.DisplayName}" Classes="title"/>
                 <TextBlock Text="{Binding SelectedCountry.NewNewsMarker}" Foreground="#FFCA4B" FontSize="24" VerticalAlignment="Center"/>

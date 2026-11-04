@@ -97,6 +97,10 @@ public partial class MainWindow : Window
             if (_viewModel?.SelectedCountry.Code == "MOON") Globe.FocusMoon();
             else Globe.FocusEarth();
         }
+        else if (e.PropertyName == nameof(MainWindowViewModel.IsLoading) && _viewModel?.IsLoading == false)
+        {
+            LoadingGlobe.StopAutoRotation();
+        }
     }
 
     private void UpdateNewsPaneButton()

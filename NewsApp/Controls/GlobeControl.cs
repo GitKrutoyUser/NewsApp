@@ -86,13 +86,16 @@ public sealed class GlobeControl : Control
             _focusLevel += (_focusTarget - _focusLevel) * 0.14;
             if (Math.Abs(_focusTarget - _focusLevel) < 0.001) _focusLevel = _focusTarget;
             InvalidateVisual();
+            if (!IsAutoRotating && Math.Abs(_focusTarget - _focusLevel) < 0.001)
+                _rotationTimer.Stop();
         };
-        _rotationTimer.Start();
     }
 
     public void ToggleAutoRotation()
     {
         IsAutoRotating = !IsAutoRotating;
+        if (IsAutoRotating) _rotationTimer.Start();
+        else if (Math.Abs(_focusTarget - _focusLevel) < 0.001) _rotationTimer.Stop();
     }
 
     public void StopAutoRotation()
@@ -104,6 +107,7 @@ public sealed class GlobeControl : Control
     private void SetFocus(bool moon)
     {
         _focusTarget = moon ? 1 : 0;
+        _rotationTimer.Start();
     }
 
     public void FocusEarth() => SetFocus(false);

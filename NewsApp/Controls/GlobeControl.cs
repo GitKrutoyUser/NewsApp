@@ -411,7 +411,9 @@ public sealed class GlobeControl : Control
     private void DrawEarthSurface(DrawingContext context, Point center, double radius)
     {
         if (_earthMap is null || _earthMap.Length < 2048 * 1024 * 4) return;
-        var size = (int)Math.Clamp(Math.Round(radius * 2), 320, 768);
+        var interactive = _dragging || IsAutoRotating;
+        var maximumFrameSize = interactive ? 480 : 768;
+        var size = (int)Math.Clamp(Math.Round(radius * 2), 320, maximumFrameSize);
         if (_earthFrame is null || _earthFrameSize != size)
         {
             _earthFrameSize = size;
@@ -548,6 +550,7 @@ public sealed class GlobeControl : Control
             _lastPointer = e.GetPosition(this);
             e.Pointer.Capture(this);
             Focus();
+            InvalidateVisual();
             e.Handled = true;
         }
         base.OnPointerPressed(e);
@@ -575,6 +578,7 @@ public sealed class GlobeControl : Control
         {
             e.Pointer.Capture(null);
             _dragging = false;
+            InvalidateVisual();
             if (!_moved && e.InitialPressMouseButton == MouseButton.Left)
             {
                 var code = HitTestCountry(e.GetPosition(this)) ?? "WORLD";

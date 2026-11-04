@@ -90,7 +90,12 @@
                           <StackPanel Orientation="Horizontal" Spacing="14"><Button Content="Читать в приложении →" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleCommand}" CommandParameter="{Binding}"/><Button Content="Читать на сайте ↗" Classes="link" Command="{Binding $parent[Window].DataContext.OpenArticleInBrowserCommand}" CommandParameter="{Binding}"/></StackPanel>
                         </StackPanel>
                       </StackPanel>
-                      <Border Grid.Column="1" IsVisible="{Binding HasImage}" Background="#44101A25" BorderBrush="#AA6887A5" BorderThickness="1" CornerRadius="12" ClipToBounds="True" VerticalAlignment="Top"><Image Source="{Binding ImageBitmap}" Stretch="UniformToFill" Width="190" Height="140" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
+                      <Border Grid.Column="1" Background="#44101A25" BorderBrush="#AA6887A5" BorderThickness="1" CornerRadius="12" ClipToBounds="True" VerticalAlignment="Top">
+                        <Grid Width="190" Height="140">
+                          <Image Source="{Binding ImageBitmap}" IsVisible="{Binding HasImage}" Stretch="UniformToFill" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                          <Image Source="avares://NewsApp/Assets/news-placeholder.png" IsVisible="{Binding !HasImage}" Stretch="UniformToFill" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Opacity="0.92"/>
+                        </Grid>
+                      </Border>
                     </Grid>
                   </Border>
                 </DataTemplate>

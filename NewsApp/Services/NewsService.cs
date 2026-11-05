@@ -10,8 +10,6 @@ namespace NewsApp.Services;
 
 public sealed class NewsService
 {
-    private const string ApiUrl = "https://freenewsapi.ai/v1/search?lang=ru";
-    private const string BundledApiKey = "fna_live_ovseKv-3n6bJITy1BJMplVoLRSdggNkySyn9ASMYTds";
     private const int MaxImageBytes = 10 * 1024 * 1024;
     private const int MaxHtmlBytes = 5 * 1024 * 1024;
     private const string LunarFeedUrl = "https://www.nasa.gov/missions/artemis/feed/";
@@ -19,6 +17,7 @@ public sealed class NewsService
     private static readonly string[] WorldCountryCodes = { "US", "RU", "DE", "FR", "GB", "CN", "JP", "IN", "BR", "CA", "AU", "IT", "ES", "TR", "KR", "MX", "PL", "NL", "SE", "CH", "IL", "UA", "ZA" };
     private readonly HttpClient _httpClient;
     private readonly HttpClient _contentClient;
+    private readonly NewsApiSettings _apiSettings;
     public string? LastApiError { get; private set; }
 
     static NewsService() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -26,9 +25,11 @@ public sealed class NewsService
     public NewsService(HttpClient? httpClient = null)
     {
         _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        _apiSettings = NewsApiSettings.Load();
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("WorldPulse/1.0");
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", BundledApiKey);
+        if (!string.IsNullOrWhiteSpace(_apiSettings.ApiKey))
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _apiSettings.ApiKey);
         _contentClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         _contentClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 WorldPulse/1.0");
         _contentClient.DefaultRequestHeaders.AcceptLanguage.ParseAdd("ru-RU,ru;q=0.9,en;q=0.8");
@@ -77,7 +78,7 @@ public sealed class NewsService
     private async Task<List<NewsApiItem>> FetchRussianLunarNewsAsync(CancellationToken cancellationToken)
     {
         var query = Uri.EscapeDataString("лунная миссия");
-        using var response = await _httpClient.GetAsync($"{ApiUrl}&q={query}&size=20", cancellationToken);
+        using var response = await _httpClient.GetAsync($"{_apiSettings.SearchEndpoint}?lang={Uri.EscapeDataString(_apiSettings.Language)}&q={query}&size=20", cancellationToken);
         if (!response.IsSuccessStatusCode) return new List<NewsApiItem>();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
@@ -102,7 +103,7 @@ public sealed class NewsService
 
     private async Task<List<NewsApiItem>> FetchLunarNewsAsync(CancellationToken cancellationToken)
     {
-        using var response = await _httpClient.GetAsync(LunarFeedUrl, cancellationToken);
+        using var response = await _contentClient.GetAsync(LunarFeedUrl, cancellationToken);
         if (!response.IsSuccessStatusCode) return new List<NewsApiItem>();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         var document = await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken);
@@ -226,7 +227,7 @@ public sealed class NewsService
         {
             try
             {
-                using var response = await _httpClient.GetAsync($"{ApiUrl}&country={countryCode}&size=12", cancellationToken);
+                using var response = await _httpClient.GetAsync($"{_apiSettings.SearchEndpoint}?lang={Uri.EscapeDataString(_apiSettings.Language)}&country={countryCode}&size=12", cancellationToken);
                 var temporaryFailure = response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500;
                 if (temporaryFailure && attempt < 2)
                 {
@@ -291,6 +292,8 @@ public sealed class NewsService
     {
         if (!Uri.TryCreate(articleUrl, UriKind.Absolute, out var uri)) return null;
         if (!IsHttpUri(uri)) return null;
+        var apiContent = await DownloadArticleFromApiAsync(articleUrl, cancellationToken);
+        if (apiContent is not null) return apiContent;
         try
         {
             using var response = await _contentClient.GetAsync(uri, cancellationToken);
@@ -331,6 +334,56 @@ public sealed class NewsService
         }
         catch (HttpRequestException) { return null; }
         catch (TaskCanceledException) { return null; }
+    }
+
+    private async Task<ArticleContent?> DownloadArticleFromApiAsync(string articleUrl, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var endpoint = $"{_apiSettings.ArticleEndpoint}?url={Uri.EscapeDataString(articleUrl)}&full_text=true";
+            using var response = await _httpClient.GetAsync(endpoint, cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var root = document.RootElement;
+            var text = FirstJsonString(root, "text", "full_text", "fullText", "content", "body", "article");
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            var paragraphs = text.Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Split("\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(HtmlEntity.DeEntitize)
+                .Where(x => x.Length >= 35)
+                .Distinct(StringComparer.Ordinal)
+                .Take(80)
+                .ToList();
+            if (paragraphs.Count == 0) paragraphs.Add(text.Trim());
+            var image = FirstJsonString(root, "image", "image_url", "imageUrl");
+            return new ArticleContent
+            {
+                Paragraphs = paragraphs,
+                ImageUrls = string.IsNullOrWhiteSpace(image) ? new List<string>() : new List<string> { MakeAbsoluteUrl(articleUrl, image)! }
+            };
+        }
+        catch (JsonException) { return null; }
+        catch (HttpRequestException) { return null; }
+        catch (TaskCanceledException) { return null; }
+    }
+
+    private static string? FirstJsonString(JsonElement root, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (!root.TryGetProperty(name, out var value)) continue;
+            if (value.ValueKind == JsonValueKind.String) return value.GetString();
+            if (value.ValueKind == JsonValueKind.Array)
+            {
+                var joined = string.Join("\n", value.EnumerateArray()
+                    .Where(x => x.ValueKind == JsonValueKind.String)
+                    .Select(x => x.GetString())
+                    .Where(x => !string.IsNullOrWhiteSpace(x)));
+                if (!string.IsNullOrWhiteSpace(joined)) return joined;
+            }
+        }
+        return null;
     }
 
     private static string CountryNameFor(string code) => code switch

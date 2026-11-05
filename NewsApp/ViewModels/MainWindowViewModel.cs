@@ -345,6 +345,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     StatusText = "пока что нет новостей для этой страны";
             });
             _ = LoadImagesAsync(items);
+            _ = TranslateCachedNewsAsync(items);
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception)
@@ -352,6 +353,22 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             Debug.WriteLine($"Cache read failed: {exception}");
             await SetUiAsync(() => StatusText = "Не удалось прочитать локальный кэш новостей");
         }
+    }
+
+    private async Task TranslateCachedNewsAsync(IReadOnlyList<NewsArticle> items)
+    {
+        try
+        {
+            var foreign = items.Where(x => !string.Equals(x.Language, "ru", StringComparison.OrdinalIgnoreCase)
+                && (string.Equals(x.OriginalTitle, x.Title, StringComparison.Ordinal)
+                    || string.Equals(x.OriginalDescription, x.Description, StringComparison.Ordinal))).ToList();
+            if (foreign.Count == 0) return;
+            await _service.TranslateForeignNewsAsync(foreign, _lifetime.Token);
+            await Task.Run(() => _repository.SaveNews(foreign), _lifetime.Token);
+            await SetUiAsync(ApplyArticleFilter);
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception) { Debug.WriteLine($"Cached translation failed: {exception}"); }
     }
 
     public async Task LoadMoreNewsAsync()

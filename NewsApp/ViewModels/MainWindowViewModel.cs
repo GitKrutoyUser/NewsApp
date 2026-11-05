@@ -50,7 +50,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         , new Country("SE", "Швеция", "🇸🇪"),
         new Country("CH", "Швейцария", "🇨🇭"),
         new Country("IL", "Израиль", "🇮🇱"), 
-        new Country("UA", "Украина", "🇺🇦"), 
+        new Country("UA", "Украина", "🇺🇦"),
+        new Country("BY", "Беларусь", "🇧🇾"),
         new Country("ZA", "ЮАР", "🇿🇦")
     });
 

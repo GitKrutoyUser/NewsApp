@@ -20,6 +20,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly DispatcherTimer _searchTimer;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
+    private CancellationTokenSource? _articleReadCancellation;
+    private int _articleReadVersion;
 
     public ObservableCollection<Country> Countries { get; } = new(new[]
     {
@@ -204,6 +206,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task OpenArticleAsync(NewsArticle article)
     {
+        _articleReadCancellation?.Cancel();
+        _articleReadCancellation?.Dispose();
+        _articleReadCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        var articleToken = _articleReadCancellation.Token;
+        var readVersion = ++_articleReadVersion;
         OpenedArticle = article;
         OpenedArticleText = article.Description;
         OpenedArticleParagraphs.Clear();
@@ -212,24 +219,25 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         IsArticleLoading = true;
         try
         {
-            var content = await _service.DownloadArticleAsync(article.Url, _lifetime.Token);
-            if (content is not null)
+            var content = await _service.DownloadArticleAsync(article.Url, articleToken);
+            if (content is not null && readVersion == _articleReadVersion && ReferenceEquals(OpenedArticle, article))
             {
                 OpenedArticleParagraphs.Clear();
                 foreach (var paragraph in content.Paragraphs) OpenedArticleParagraphs.Add(paragraph);
             }
         }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (articleToken.IsCancellationRequested) { }
         catch (Exception exception) { Debug.WriteLine($"Read article failed: {exception}"); }
         finally
         {
-            IsArticleLoading = false;
+            if (readVersion == _articleReadVersion) IsArticleLoading = false;
         }
     }
 
     [RelayCommand]
     private void CloseArticle()
     {
+        _articleReadCancellation?.Cancel();
         IsReadingArticle = false;
         OpenedArticle = null;
         OpenedArticleText = string.Empty;

@@ -348,13 +348,7 @@ public sealed class NewsService
             var root = document.RootElement;
             var text = FirstJsonString(root, "text", "full_text", "fullText", "content", "body", "article");
             if (string.IsNullOrWhiteSpace(text)) return null;
-            var paragraphs = text.Replace("\r\n", "\n", StringComparison.Ordinal)
-                .Split("\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(HtmlEntity.DeEntitize)
-                .Where(x => x.Length >= 35)
-                .Distinct(StringComparer.Ordinal)
-                .Take(80)
-                .ToList();
+            var paragraphs = ExtractArticleParagraphs(text);
             if (paragraphs.Count == 0) paragraphs.Add(text.Trim());
             var image = FirstJsonString(root, "image", "image_url", "imageUrl");
             return new ArticleContent
@@ -384,6 +378,26 @@ public sealed class NewsService
             }
         }
         return null;
+    }
+
+    private static List<string> ExtractArticleParagraphs(string text)
+    {
+        var document = new HtmlDocument();
+        document.LoadHtml(text);
+        var htmlParagraphs = document.DocumentNode.SelectNodes("//p")?
+            .Select(x => HtmlEntity.DeEntitize(x.InnerText).Trim())
+            .Where(x => x.Length >= 35)
+            .ToList();
+        if (htmlParagraphs is { Count: > 0 })
+            return htmlParagraphs.Distinct(StringComparer.Ordinal).Take(80).ToList();
+
+        return text.Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Split("\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(HtmlEntity.DeEntitize)
+            .Where(x => x.Length >= 35)
+            .Distinct(StringComparer.Ordinal)
+            .Take(80)
+            .ToList();
     }
 
     private static string CountryNameFor(string code) => code switch

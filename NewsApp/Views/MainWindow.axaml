@@ -60,18 +60,28 @@
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="0" VerticalAlignment="Top">
               <Button Content="Фильтры" Margin="0,0,8,0" Padding="12,8" Background="#B4141D2A" BorderBrush="#99677D96" BorderThickness="1" Foreground="#DCEBFA" CornerRadius="9" ToolTip.Tip="Фильтры новостей">
                 <Button.Flyout>
-                  <MenuFlyout>
-                    <MenuItem Header="Все языки" Command="{Binding SetLanguageFilterCommand}" CommandParameter="all"/>
-                    <MenuItem Header="Только русский" Command="{Binding SetLanguageFilterCommand}" CommandParameter="ru"/>
-                    <MenuItem Header="Только английский" Command="{Binding SetLanguageFilterCommand}" CommandParameter="en"/>
-                    <Separator/>
-                    <MenuItem Header="За всё время" Command="{Binding SetPeriodFilterCommand}" CommandParameter="0"/>
-                    <MenuItem Header="За 24 часа" Command="{Binding SetPeriodFilterCommand}" CommandParameter="1"/>
-                    <MenuItem Header="За 7 дней" Command="{Binding SetPeriodFilterCommand}" CommandParameter="7"/>
-                    <MenuItem Header="Только с изображениями" Command="{Binding ToggleImagesFilterCommand}"/>
-                    <Separator/>
-                    <MenuItem Header="Сбросить фильтры" Command="{Binding ResetFiltersCommand}"/>
-                  </MenuFlyout>
+                  <Flyout Placement="BottomEdgeAlignedLeft">
+                    <Border Background="#F21A2838" BorderBrush="#AA7895B4" BorderThickness="1" CornerRadius="16" Padding="16" Width="280" BoxShadow="0 12 30 0 #99000000">
+                      <StackPanel Spacing="9">
+                        <TextBlock Text="Фильтры новостей" FontSize="18" FontWeight="Bold" Foreground="#F4F8FF"/>
+                        <TextBlock Text="{Binding FilterSummary}" Classes="muted"/>
+                        <TextBlock Text="Язык" Foreground="#8BC7FF" FontWeight="Bold" Margin="0,8,0,0"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <Button Content="Все" Command="{Binding SetLanguageFilterCommand}" CommandParameter="all" Padding="10,6"/>
+                          <Button Content="Русский" Command="{Binding SetLanguageFilterCommand}" CommandParameter="ru" Padding="10,6"/>
+                          <Button Content="English" Command="{Binding SetLanguageFilterCommand}" CommandParameter="en" Padding="10,6"/>
+                        </StackPanel>
+                        <TextBlock Text="Период публикации" Foreground="#8BC7FF" FontWeight="Bold" Margin="0,8,0,0"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <Button Content="Всё" Command="{Binding SetPeriodFilterCommand}" CommandParameter="0" Padding="10,6"/>
+                          <Button Content="24 часа" Command="{Binding SetPeriodFilterCommand}" CommandParameter="1" Padding="10,6"/>
+                          <Button Content="7 дней" Command="{Binding SetPeriodFilterCommand}" CommandParameter="7" Padding="10,6"/>
+                        </StackPanel>
+                        <Button Content="Только с изображениями" Command="{Binding ToggleImagesFilterCommand}" HorizontalContentAlignment="Left" Padding="10,7"/>
+                        <Button Content="Сбросить фильтры" Command="{Binding ResetFiltersCommand}" HorizontalContentAlignment="Center" Padding="10,8" Background="#883B5E7D" Foreground="#FFFFFF"/>
+                      </StackPanel>
+                    </Border>
+                  </Flyout>
                 </Button.Flyout>
               </Button>
               <Button x:Name="RefreshButton" Classes="refreshMain" Command="{Binding RefreshCommand}" ToolTip.Tip="Обновить через API" CornerRadius="9,0,0,9" IsEnabled="{Binding !IsRefreshing}">

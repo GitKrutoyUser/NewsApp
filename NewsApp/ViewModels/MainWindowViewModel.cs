@@ -75,6 +75,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _languageFilter = "all";
     [ObservableProperty] private int _periodDays;
     [ObservableProperty] private bool _onlyWithImages;
+    public string FilterSummary => (LanguageFilter == "all" ? "Все языки" : LanguageFilter == "ru" ? "Русский" : "Английский")
+        + (PeriodDays == 0 ? " · всё время" : $" · {PeriodDays} дн.")
+        + (OnlyWithImages ? " · с фото" : string.Empty);
 
     public MainWindowViewModel() : this(new NewsRepository(), new NewsService()) { }
 
@@ -103,9 +106,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _searchTimer.Start();
     }
 
-    partial void OnLanguageFilterChanged(string value) => ApplyArticleFilter();
-    partial void OnPeriodDaysChanged(int value) => ApplyArticleFilter();
-    partial void OnOnlyWithImagesChanged(bool value) => ApplyArticleFilter();
+    partial void OnLanguageFilterChanged(string value) { ApplyArticleFilter(); OnPropertyChanged(nameof(FilterSummary)); }
+    partial void OnPeriodDaysChanged(int value) { ApplyArticleFilter(); OnPropertyChanged(nameof(FilterSummary)); }
+    partial void OnOnlyWithImagesChanged(bool value) { ApplyArticleFilter(); OnPropertyChanged(nameof(FilterSummary)); }
 
     private void ApplyArticleFilter()
     {

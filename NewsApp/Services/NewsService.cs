@@ -233,7 +233,8 @@ public sealed class NewsService
         await Parallel.ForEachAsync(articles.Where(x => !string.Equals(x.Language, "ru", StringComparison.OrdinalIgnoreCase)),
             new ParallelOptions { MaxDegreeOfParallelism = 2, CancellationToken = cancellationToken }, async (article, token) =>
             {
-                var sourceLanguage = string.IsNullOrWhiteSpace(article.Language) || article.Language == "unknown" ? "en" : article.Language.Split(',')[0];
+                var sourceLanguage = article.Language.StartsWith("ru", StringComparison.OrdinalIgnoreCase) ? "ru" : "en";
+                if (sourceLanguage == "ru") return;
                 var title = await TranslateTextAsync(article.Title, sourceLanguage, token);
                 var description = await TranslateTextAsync(article.Description, sourceLanguage, token);
                 if (!string.IsNullOrWhiteSpace(title)) article.Title = title;
@@ -306,6 +307,7 @@ public sealed class NewsService
     {
         if (string.IsNullOrWhiteSpace(item.Url)) return null;
         var country = item.Country?.ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(country)) country = CountryFromTld(item.Tld);
         if (string.IsNullOrWhiteSpace(country)) country = "WORLD";
         if (country.Length > 8) country = "WORLD";
         var imageUrl = MakeAbsoluteUrl(item.Url, item.Image ?? item.ImageUrl ?? item.ImageUrlCamelCase);
@@ -323,7 +325,7 @@ public sealed class NewsService
             OriginalTitle = item.Title ?? "Без заголовка",
             Description = item.Description ?? string.Empty,
             OriginalDescription = item.Description ?? string.Empty,
-            Language = item.Language ?? "unknown",
+            Language = NormalizeLanguage(item.Language, item.Tld),
             PublishedAt = publishedAt,
             ImageUrl = imageUrl
         };
@@ -441,6 +443,24 @@ public sealed class NewsService
             .ToList();
     }
 
+    private static string NormalizeLanguage(string? language, string? tld)
+    {
+        var value = language?.Trim().ToLowerInvariant().Replace('_', '-');
+        if (string.IsNullOrWhiteSpace(value))
+            return tld?.ToLowerInvariant() switch { "ru" or "by" or "ua" => "ru", _ => "en" };
+        if (value.StartsWith("ru", StringComparison.Ordinal)) return "ru";
+        if (value.StartsWith("en", StringComparison.Ordinal)) return "en";
+        return value.Length >= 2 ? value[..2] : "en";
+    }
+
+    private static string? CountryFromTld(string? tld) => tld?.Trim('.').ToLowerInvariant() switch
+    {
+        "ru" => "RU", "by" => "BY", "ua" => "UA", "us" => "US", "gb" or "uk" => "GB",
+        "de" => "DE", "fr" => "FR", "es" => "ES", "it" => "IT", "cn" => "CN", "jp" => "JP",
+        "in" => "IN", "br" => "BR", "ca" => "CA", "au" => "AU", "pl" => "PL", "tr" => "TR",
+        "kz" => "KZ", "uz" => "UZ", "il" => "IL", "za" => "ZA", _ => null
+    };
+
     private static string CountryNameFor(string code) => code switch
     {
         "US" => "США", "RU" => "Россия", "UA" => "Украина", "BY" => "Беларусь", "DE" => "Германия", "FR" => "Франция", "GB" => "Великобритания",
@@ -453,7 +473,7 @@ public sealed class NewsService
         "AR" => "Аргентина", "CL" => "Чили", "CO" => "Колумбия", "PE" => "Перу", "KZ" => "Казахстан", "UZ" => "Узбекистан",
         "PK" => "Пакистан", "BD" => "Бангладеш", "ID" => "Индонезия", "MY" => "Малайзия", "SG" => "Сингапур", "TH" => "Таиланд",
         "VN" => "Вьетнам", "PH" => "Филиппины", "IR" => "Иран", "IQ" => "Ирак", "GE" => "Грузия", "AM" => "Армения",
-        "MOON" => "Луна", _ => "Мир"
+        "MOON" => "Луна", "WORLD" => "Мир · страна не указана", _ => "Мир · страна не указана"
     };
 
     private async Task<string?> TryGetOgImageAsync(string articleUrl, CancellationToken cancellationToken)

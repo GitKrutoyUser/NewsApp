@@ -5,7 +5,7 @@ public sealed class NewsApiSettings
     public string BaseUrl { get; init; } = "https://freenewsapi.ai";
     public string SearchPath { get; init; } = "/v1/search";
     public string ArticlePath { get; init; } = "/v1/article";
-    public string Language { get; init; } = "ru";
+    public string Language { get; init; } = "ru,en";
     public string ApiKey { get; init; } = string.Empty;
 
     public string SearchEndpoint => BuildEndpoint(SearchPath);
@@ -19,7 +19,7 @@ public sealed class NewsApiSettings
             BaseUrl = Read("FREENEWSAPI_BASE_URL", "https://freenewsapi.ai").TrimEnd('/'),
             SearchPath = Read("FREENEWSAPI_SEARCH_PATH", "/v1/search"),
             ArticlePath = Read("FREENEWSAPI_ARTICLE_PATH", "/v1/article"),
-            Language = Read("FREENEWSAPI_LANG", "ru"),
+            Language = Read("FREENEWSAPI_LANG", "ru,en"),
             ApiKey = Read("FREENEWSAPI_API_KEY", string.Empty)
         };
     }

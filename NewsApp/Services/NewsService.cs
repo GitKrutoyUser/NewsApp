@@ -14,7 +14,13 @@ public sealed class NewsService
     private const int MaxHtmlBytes = 5 * 1024 * 1024;
     private const string LunarFeedUrl = "https://www.nasa.gov/missions/artemis/feed/";
     private static readonly XNamespace ContentNamespace = "http://purl.org/rss/1.0/modules/content/";
-    private static readonly string[] WorldCountryCodes = { "US", "RU", "DE", "FR", "GB", "CN", "JP", "IN", "BR", "CA", "AU", "IT", "ES", "TR", "KR", "MX", "PL", "NL", "SE", "CH", "IL", "UA", "ZA" };
+    private static readonly string[] WorldCountryCodes =
+    {
+        "US", "RU", "UA", "CA", "MX", "BR", "AR", "CL", "CO", "PE", "VE",
+        "GB", "IE", "FR", "DE", "ES", "PT", "IT", "NL", "BE", "CH", "AT", "PL", "CZ", "SK", "HU", "RO", "BG", "GR", "SE", "NO", "DK", "FI", "IS", "EE", "LV", "LT", "RS", "HR", "SI", "BA", "AL", "MD", "GE", "AM", "AZ", "BY",
+        "CN", "JP", "KR", "IN", "PK", "BD", "ID", "MY", "SG", "TH", "VN", "PH", "TW", "HK",
+        "AU", "NZ", "ZA", "EG", "MA", "DZ", "TN", "NG", "KE", "ET", "GH", "TZ", "IL", "TR", "SA", "AE", "QA", "IR", "IQ", "KZ", "UZ"
+    };
     private readonly HttpClient _httpClient;
     private readonly HttpClient _contentClient;
     private readonly NewsApiSettings _apiSettings;
@@ -402,11 +408,17 @@ public sealed class NewsService
 
     private static string CountryNameFor(string code) => code switch
     {
-        "US" => "США", "RU" => "Россия", "DE" => "Германия", "FR" => "Франция", "GB" => "Великобритания",
-        "CN" => "Китай", "JP" => "Япония", "IN" => "Индия", "BR" => "Бразилия", "CA" => "Канада",
-        "AU" => "Австралия", "IT" => "Италия", "ES" => "Испания", "TR" => "Турция", "KR" => "Южная Корея",
-        "MX" => "Мексика", "PL" => "Польша", "NL" => "Нидерланды", "SE" => "Швеция", "CH" => "Швейцария",
-        "IL" => "Израиль", "UA" => "Украина", "ZA" => "ЮАР", "MOON" => "Луна", _ => "Мир"
+        "US" => "США", "RU" => "Россия", "UA" => "Украина", "DE" => "Германия", "FR" => "Франция", "GB" => "Великобритания",
+        "CN" => "Китай", "JP" => "Япония", "IN" => "Индия", "BR" => "Бразилия", "CA" => "Канада", "MX" => "Мексика",
+        "AU" => "Австралия", "NZ" => "Новая Зеландия", "IT" => "Италия", "ES" => "Испания", "PT" => "Португалия", "IE" => "Ирландия",
+        "TR" => "Турция", "KR" => "Южная Корея", "PL" => "Польша", "NL" => "Нидерланды", "BE" => "Бельгия", "CH" => "Швейцария",
+        "AT" => "Австрия", "SE" => "Швеция", "NO" => "Норвегия", "DK" => "Дания", "FI" => "Финляндия", "GR" => "Греция",
+        "CZ" => "Чехия", "RO" => "Румыния", "HU" => "Венгрия", "BG" => "Болгария", "IL" => "Израиль", "SA" => "Саудовская Аравия",
+        "AE" => "ОАЭ", "EG" => "Египет", "ZA" => "ЮАР", "NG" => "Нигерия", "KE" => "Кения", "MA" => "Марокко",
+        "AR" => "Аргентина", "CL" => "Чили", "CO" => "Колумбия", "PE" => "Перу", "KZ" => "Казахстан", "UZ" => "Узбекистан",
+        "PK" => "Пакистан", "BD" => "Бангладеш", "ID" => "Индонезия", "MY" => "Малайзия", "SG" => "Сингапур", "TH" => "Таиланд",
+        "VN" => "Вьетнам", "PH" => "Филиппины", "IR" => "Иран", "IQ" => "Ирак", "GE" => "Грузия", "AM" => "Армения",
+        "MOON" => "Луна", _ => "Мир"
     };
 
     private async Task<string?> TryGetOgImageAsync(string articleUrl, CancellationToken cancellationToken)

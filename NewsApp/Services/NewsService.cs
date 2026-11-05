@@ -227,41 +227,6 @@ public sealed class NewsService
             .ToList();
     }
 
-    public async Task TranslateForeignNewsAsync(IReadOnlyList<NewsArticle> articles, CancellationToken cancellationToken = default)
-    {
-        if (!_apiSettings.TranslationEnabled || string.IsNullOrWhiteSpace(_apiSettings.TranslationEndpoint)) return;
-        foreach (var article in articles.Where(x => !string.Equals(x.Language, "ru", StringComparison.OrdinalIgnoreCase)))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-                var sourceLanguage = article.Language.StartsWith("ru", StringComparison.OrdinalIgnoreCase) ? "ru" : "en";
-                if (sourceLanguage == "ru") continue;
-                var title = await TranslateTextAsync(article.Title, sourceLanguage, cancellationToken);
-                var description = await TranslateTextAsync(article.Description, sourceLanguage, cancellationToken);
-                if (!string.IsNullOrWhiteSpace(title)) article.Title = title;
-                if (!string.IsNullOrWhiteSpace(description)) article.Description = description;
-                await Task.Delay(180, cancellationToken);
-        }
-    }
-
-    private async Task<string?> TranslateTextAsync(string text, string sourceLanguage, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return text;
-        try
-        {
-            var endpoint = $"{_apiSettings.TranslationEndpoint}?q={Uri.EscapeDataString(text[..Math.Min(text.Length, 480)])}&langpair={Uri.EscapeDataString($"{sourceLanguage}|ru")}";
-            using var response = await _contentClient.GetAsync(endpoint, cancellationToken);
-            if (!response.IsSuccessStatusCode) return null;
-            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-            if (document.RootElement.TryGetProperty("responseStatus", out var status) && status.GetInt32() != 200) return null;
-            return document.RootElement.TryGetProperty("responseData", out var data) && data.TryGetProperty("translatedText", out var translated)
-                ? translated.GetString()
-                : null;
-        }
-        catch (JsonException) { return null; }
-        catch (HttpRequestException) { return null; }
-        catch (TaskCanceledException) { return null; }
-    }
-
     private async Task<List<NewsApiItem>> FetchCountryAsync(string countryCode, CancellationToken cancellationToken)
     {
         for (var attempt = 0; attempt < 3; attempt++)

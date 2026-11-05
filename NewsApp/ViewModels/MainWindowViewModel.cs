@@ -72,6 +72,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _openedArticleText = string.Empty;
     [ObservableProperty] private bool _isArticleLoading;
     [ObservableProperty] private bool _isLoadingMore;
+    [ObservableProperty] private double _articleFontSize = 17;
+    [ObservableProperty] private bool _showOriginalSummary;
     [ObservableProperty] private string _languageFilter = "all";
     [ObservableProperty] private int _periodDays;
     [ObservableProperty] private bool _onlyWithImages;
@@ -177,6 +179,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
+    private void IncreaseArticleFont() => ArticleFontSize = Math.Min(24, ArticleFontSize + 1);
+
+    [RelayCommand]
+    private void DecreaseArticleFont() => ArticleFontSize = Math.Max(14, ArticleFontSize - 1);
+
+    [RelayCommand]
+    private void ToggleOriginalSummary() => ShowOriginalSummary = !ShowOriginalSummary;
+
+    [RelayCommand]
     private async Task LoadCacheAsync()
     {
         await LoadCachedNewsAsync(SelectedCountry.Code);
@@ -198,9 +209,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 if (DateTimeOffset.UtcNow - lastSync.Value < minimumInterval)
                 {
                 var next = lastSync.Value.Add(MinimumApiInterval).ToLocalTime();
-                    await SetUiAsync(() => StatusText = manual
-                        ? $"Ручное обновление доступно после {lastSync.Value.Add(MinimumManualInterval).ToLocalTime():HH:mm}"
-                        : $"Следующее автоматическое обновление после {next:HH:mm}");
+                    if (manual)
+                        await SetUiAsync(() => StatusText = $"Ручное обновление доступно после {lastSync.Value.Add(MinimumManualInterval).ToLocalTime():HH:mm}");
                     return;
                 }
             }
@@ -226,17 +236,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 NewCountriesChanged?.Invoke(this, newCountries);
             });
             if (reloadCurrentCountry) await LoadCachedNewsAsync(SelectedCountry.Code);
-            await SetUiAsync(() => StatusText = news.Count == 0
-                ? _service.LastApiError ?? "API не вернул новости · проверь фильтры и ключ в .env"
-                : reloadCurrentCountry
-                    ? $"Обновлено: {DateTime.Now:HH:mm} · {news.Count} материалов"
-                    : $"Фоновое обновление: {DateTime.Now:HH:mm} · база пополнена на {news.Count}, удалено старых: {removed}");
+            if (reloadCurrentCountry)
+                await SetUiAsync(() => StatusText = news.Count == 0
+                    ? _service.LastApiError ?? "API не вернул новости · проверь фильтры и ключ в .env"
+                    : $"Обновлено: {DateTime.Now:HH:mm} · {news.Count} материалов");
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception)
         {
             Debug.WriteLine($"News refresh failed: {exception}");
-            await SetUiAsync(() => StatusText = "Нет соединения · показываем последние сохранённые новости");
+            if (reloadCurrentCountry)
+                await SetUiAsync(() => StatusText = "Нет соединения · показываем последние сохранённые новости");
             if (reloadCurrentCountry) await LoadCachedNewsAsync(SelectedCountry.Code);
         }
         finally

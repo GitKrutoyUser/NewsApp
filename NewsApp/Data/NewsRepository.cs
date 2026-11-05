@@ -202,7 +202,7 @@ public sealed class NewsRepository
         command.ExecuteNonQuery();
     }
 
-    public IReadOnlyList<NewsArticle> GetNewsByCountry(string countryCode)
+    public IReadOnlyList<NewsArticle> GetNewsByCountry(string countryCode, int limit = 30, int offset = 0)
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
@@ -211,9 +211,12 @@ public sealed class NewsRepository
             SELECT url, country_code, country_name, title, description, published_at, image_url
             FROM news
             WHERE $country = 'WORLD' OR country_code = $country
-            ORDER BY published_at DESC;
+            ORDER BY published_at DESC
+            LIMIT $limit OFFSET $offset;
             """;
         command.Parameters.AddWithValue("$country", countryCode);
+        command.Parameters.AddWithValue("$limit", Math.Clamp(limit, 1, 100));
+        command.Parameters.AddWithValue("$offset", Math.Max(0, offset));
 
         using var reader = command.ExecuteReader();
         var result = new List<NewsArticle>();

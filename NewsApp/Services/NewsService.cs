@@ -50,13 +50,13 @@ public sealed class NewsService
         var articlesFromApi = new List<NewsApiItem>();
         try
         {
-            await Parallel.ForEachAsync(WorldCountryCodes, new ParallelOptions
+            await Parallel.ForEachAsync(WorldCountryCodes.Chunk(12), new ParallelOptions
             {
-                MaxDegreeOfParallelism = 4,
+                MaxDegreeOfParallelism = 2,
                 CancellationToken = requestToken
             }, async (countryCode, token) =>
             {
-                var items = await FetchCountryAsync(countryCode, token);
+                var items = await FetchCountryAsync(string.Join(",", countryCode), token);
                 lock (articlesFromApi) articlesFromApi.AddRange(items);
             });
         }
@@ -233,7 +233,7 @@ public sealed class NewsService
         {
             try
             {
-                using var response = await _httpClient.GetAsync($"{_apiSettings.SearchEndpoint}?lang={Uri.EscapeDataString(_apiSettings.Language)}&country={countryCode}&size=12", cancellationToken);
+                using var response = await _httpClient.GetAsync($"{_apiSettings.SearchEndpoint}?lang={Uri.EscapeDataString(_apiSettings.Language)}&country={Uri.EscapeDataString(countryCode)}&size=100", cancellationToken);
                 var temporaryFailure = response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500;
                 if (temporaryFailure && attempt < 2)
                 {

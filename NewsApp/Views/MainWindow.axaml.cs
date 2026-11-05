@@ -211,6 +211,14 @@ public partial class MainWindow : Window
         ArticleScrollViewer.Offset = new Vector(0, 0);
     }
 
+    private async void OnNewsScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        if (_viewModel is null || _viewModel.SelectedCountry.Code != "WORLD") return;
+        if (e.OffsetDelta.Y <= 0 && e.ExtentDelta.Y == 0) return;
+        if (NewsScrollViewer.Offset.Y + NewsScrollViewer.Viewport.Height >= NewsScrollViewer.Extent.Height - 900)
+            await _viewModel.LoadMoreNewsAsync();
+    }
+
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.F11) return;

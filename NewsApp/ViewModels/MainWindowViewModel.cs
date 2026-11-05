@@ -11,11 +11,12 @@ namespace NewsApp.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
-    private static readonly TimeSpan MinimumApiInterval = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan MinimumApiInterval = TimeSpan.FromHours(1);
     private static readonly TimeSpan MinimumManualInterval = TimeSpan.FromMinutes(5);
     public event EventHandler<IReadOnlySet<string>>? NewCountriesChanged;
     private readonly NewsRepository _repository;
     private readonly NewsService _service;
+    private const int NewsPageSize = 30;
     private readonly System.Timers.Timer _refreshTimer;
     private readonly DispatcherTimer _searchTimer;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
@@ -56,6 +57,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public ObservableCollection<NewsArticle> Articles { get; } = new();
     public ObservableCollection<string> OpenedArticleParagraphs { get; } = new();
     private IReadOnlyList<NewsArticle> _loadedArticles = Array.Empty<NewsArticle>();
+    private int _newsOffset;
+    private bool _hasMoreNews;
 
     [ObservableProperty] private Country _selectedCountry;
     [ObservableProperty] private bool _isRefreshing;
@@ -67,6 +70,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private NewsArticle? _openedArticle;
     [ObservableProperty] private string _openedArticleText = string.Empty;
     [ObservableProperty] private bool _isArticleLoading;
+    [ObservableProperty] private bool _isLoadingMore;
 
     public MainWindowViewModel() : this(new NewsRepository(), new NewsService()) { }
 
@@ -81,7 +85,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             _searchTimer.Stop();
             ApplyArticleFilter();
         };
-        _refreshTimer = new System.Timers.Timer(TimeSpan.FromMinutes(30).TotalMilliseconds) { AutoReset = true };
+        _refreshTimer = new System.Timers.Timer(TimeSpan.FromHours(1).TotalMilliseconds) { AutoReset = true };
         _refreshTimer.Elapsed += OnTimerElapsed;
         _refreshTimer.Start();
         _ = InitializeAsync();
@@ -147,7 +151,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             : $"Показано из базы: {Articles.Count} материалов");
     }
 
-    private async Task RefreshInternalAsync(bool manual)
+    private async Task RefreshInternalAsync(bool manual, bool reloadCurrentCountry = true)
     {
         if (!await _refreshGate.WaitAsync(0)) return;
         try
@@ -166,7 +170,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     return;
                 }
             }
-            await SetUiAsync(() => { IsRefreshing = true; StatusText = "Новости обновляются"; });
+            if (manual || reloadCurrentCountry)
+                await SetUiAsync(() => { IsRefreshing = true; StatusText = "Новости обновляются"; });
             var fetchedNews = await _service.FetchNewsAsync(_lifetime.Token);
             var news = fetchedNews
                 .Where(x => !string.IsNullOrWhiteSpace(x.Description))
@@ -184,21 +189,23 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 foreach (var country in Countries) country.HasNewNews = newCountries.Contains(country.Code);
                 NewCountriesChanged?.Invoke(this, newCountries);
             });
-            await LoadCachedNewsAsync(SelectedCountry.Code);
+            if (reloadCurrentCountry) await LoadCachedNewsAsync(SelectedCountry.Code);
             await SetUiAsync(() => StatusText = news.Count == 0
                 ? _service.LastApiError ?? "API не вернул новости · проверь фильтры и ключ в .env"
-                : $"Обновлено: {DateTime.Now:HH:mm} · {news.Count} материалов");
+                : reloadCurrentCountry
+                    ? $"Обновлено: {DateTime.Now:HH:mm} · {news.Count} материалов"
+                    : $"Фоновое обновление: {DateTime.Now:HH:mm} · база пополнена на {news.Count} материалов");
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception)
         {
             Debug.WriteLine($"News refresh failed: {exception}");
             await SetUiAsync(() => StatusText = "Нет соединения · показываем последние сохранённые новости");
-            await LoadCachedNewsAsync(SelectedCountry.Code);
+            if (reloadCurrentCountry) await LoadCachedNewsAsync(SelectedCountry.Code);
         }
         finally
         {
-            await SetUiAsync(() => IsRefreshing = false);
+            if (manual || reloadCurrentCountry) await SetUiAsync(() => IsRefreshing = false);
             _refreshGate.Release();
         }
     }
@@ -258,7 +265,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private async void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
     {
-        try { await RefreshInternalAsync(false); }
+        try { await RefreshInternalAsync(false, false); }
         catch (Exception exception) { Debug.WriteLine($"Timer refresh failed: {exception}"); }
     }
 
@@ -281,7 +288,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            var items = await Task.Run(() => _repository.GetNewsByCountry(countryCode), _lifetime.Token);
+            var items = await Task.Run(() => _repository.GetNewsByCountry(countryCode, NewsPageSize, 0), _lifetime.Token);
+            _newsOffset = items.Count;
+            _hasMoreNews = items.Count == NewsPageSize;
             await SetUiAsync(() =>
             {
                 _loadedArticles = items;
@@ -296,6 +305,31 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             Debug.WriteLine($"Cache read failed: {exception}");
             await SetUiAsync(() => StatusText = "Не удалось прочитать локальный кэш новостей");
+        }
+    }
+
+    public async Task LoadMoreNewsAsync()
+    {
+        if (SelectedCountry.Code != "WORLD" || !_hasMoreNews || IsLoadingMore) return;
+        IsLoadingMore = true;
+        try
+        {
+            var page = await Task.Run(() => _repository.GetNewsByCountry("WORLD", NewsPageSize, _newsOffset), _lifetime.Token);
+            _newsOffset += page.Count;
+            _hasMoreNews = page.Count == NewsPageSize;
+            if (page.Count == 0) return;
+            var combined = _loadedArticles.Concat(page).ToList();
+            await SetUiAsync(() =>
+            {
+                _loadedArticles = combined;
+                ApplyArticleFilter();
+            });
+            _ = LoadImagesAsync(page);
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally
+        {
+            IsLoadingMore = false;
         }
     }
 

@@ -58,6 +58,22 @@
               <TextBlock Text="Последние новости" Classes="muted" Margin="0,6,0,0"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="0" VerticalAlignment="Top">
+              <Button Content="Фильтры" Margin="0,0,8,0" Padding="12,8" Background="#B4141D2A" BorderBrush="#99677D96" BorderThickness="1" Foreground="#DCEBFA" CornerRadius="9" ToolTip.Tip="Фильтры новостей">
+                <Button.Flyout>
+                  <MenuFlyout>
+                    <MenuItem Header="Все языки" Command="{Binding SetLanguageFilterCommand}" CommandParameter="all"/>
+                    <MenuItem Header="Только русский" Command="{Binding SetLanguageFilterCommand}" CommandParameter="ru"/>
+                    <MenuItem Header="Только английский" Command="{Binding SetLanguageFilterCommand}" CommandParameter="en"/>
+                    <Separator/>
+                    <MenuItem Header="За всё время" Command="{Binding SetPeriodFilterCommand}" CommandParameter="0"/>
+                    <MenuItem Header="За 24 часа" Command="{Binding SetPeriodFilterCommand}" CommandParameter="1"/>
+                    <MenuItem Header="За 7 дней" Command="{Binding SetPeriodFilterCommand}" CommandParameter="7"/>
+                    <MenuItem Header="Только с изображениями" Command="{Binding ToggleImagesFilterCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="Сбросить фильтры" Command="{Binding ResetFiltersCommand}"/>
+                  </MenuFlyout>
+                </Button.Flyout>
+              </Button>
               <Button x:Name="RefreshButton" Classes="refreshMain" Command="{Binding RefreshCommand}" ToolTip.Tip="Обновить через API" CornerRadius="9,0,0,9" IsEnabled="{Binding !IsRefreshing}">
                 <Path x:Name="RefreshIcon" Data="M 19,9 C 16,3 8,3 5,9 M 5,9 V 4 M 5,9 H 10 M 5,15 C 8,21 16,21 19,15 M 19,15 V 20 M 19,15 H 14" Width="25" Height="25" Stretch="Uniform" Stroke="#F1F7FF" StrokeThickness="2.2" StrokeLineCap="Round"/>
               </Button>

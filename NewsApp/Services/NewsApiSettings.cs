@@ -7,6 +7,8 @@ public sealed class NewsApiSettings
     public string ArticlePath { get; init; } = "/v1/article";
     public string Language { get; init; } = "ru,en";
     public string ApiKey { get; init; } = string.Empty;
+    public string TranslationEndpoint { get; init; } = "https://api.mymemory.translated.net/get";
+    public bool TranslationEnabled { get; init; } = true;
 
     public string SearchEndpoint => BuildEndpoint(SearchPath);
     public string ArticleEndpoint => BuildEndpoint(ArticlePath);
@@ -21,6 +23,8 @@ public sealed class NewsApiSettings
             ArticlePath = Read("FREENEWSAPI_ARTICLE_PATH", "/v1/article"),
             Language = Read("FREENEWSAPI_LANG", "ru,en"),
             ApiKey = Read("FREENEWSAPI_API_KEY", string.Empty)
+            , TranslationEndpoint = Read("TRANSLATION_ENDPOINT", "https://api.mymemory.translated.net/get")
+            , TranslationEnabled = !string.Equals(Read("TRANSLATION_ENABLED", "true"), "false", StringComparison.OrdinalIgnoreCase)
         };
     }
 

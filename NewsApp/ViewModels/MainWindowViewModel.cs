@@ -72,6 +72,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _openedArticleText = string.Empty;
     [ObservableProperty] private bool _isArticleLoading;
     [ObservableProperty] private bool _isLoadingMore;
+    [ObservableProperty] private string _languageFilter = "all";
+    [ObservableProperty] private int _periodDays;
+    [ObservableProperty] private bool _onlyWithImages;
 
     public MainWindowViewModel() : this(new NewsRepository(), new NewsService()) { }
 
@@ -100,6 +103,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _searchTimer.Start();
     }
 
+    partial void OnLanguageFilterChanged(string value) => ApplyArticleFilter();
+    partial void OnPeriodDaysChanged(int value) => ApplyArticleFilter();
+    partial void OnOnlyWithImagesChanged(bool value) => ApplyArticleFilter();
+
     private void ApplyArticleFilter()
     {
         var query = SearchText.Trim();
@@ -109,6 +116,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 x.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 x.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 x.CountryName.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (LanguageFilter == "ru") filtered = filtered.Where(x => string.Equals(x.Language, "ru", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (LanguageFilter == "en") filtered = filtered.Where(x => x.Language.StartsWith("en", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (PeriodDays > 0) filtered = filtered.Where(x => x.PublishedAt >= DateTimeOffset.UtcNow.AddDays(-PeriodDays)).ToList();
+        if (OnlyWithImages) filtered = filtered.Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl)).ToList();
+        filtered = filtered.OrderByDescending(x => x.PublishedAt).ToList();
 
         Articles.Clear();
         foreach (var article in filtered) Articles.Add(article);
@@ -144,6 +156,24 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void ToggleNewsPane() => IsNewsPaneVisible = !IsNewsPaneVisible;
 
     [RelayCommand]
+    private void SetLanguageFilter(string value) => LanguageFilter = value;
+
+    [RelayCommand]
+    private void SetPeriodFilter(string value) => PeriodDays = int.TryParse(value, out var days) ? days : 0;
+
+    [RelayCommand]
+    private void ToggleImagesFilter() => OnlyWithImages = !OnlyWithImages;
+
+    [RelayCommand]
+    private void ResetFilters()
+    {
+        SearchText = string.Empty;
+        LanguageFilter = "all";
+        PeriodDays = 0;
+        OnlyWithImages = false;
+    }
+
+    [RelayCommand]
     private async Task LoadCacheAsync()
     {
         await LoadCachedNewsAsync(SelectedCountry.Code);
@@ -177,6 +207,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var news = fetchedNews
                 .Where(x => !string.IsNullOrWhiteSpace(x.Description))
                 .ToList();
+            await _service.TranslateForeignNewsAsync(news, _lifetime.Token);
+            var removed = await Task.Run(() => _repository.DeleteNewsOlderThan(TimeSpan.FromDays(30)), _lifetime.Token);
             await Task.Run(() => _repository.DeleteNewsByCountry("MOON"), _lifetime.Token);
             var knownUrls = await Task.Run(() => _repository.GetKnownUrls(), _lifetime.Token);
             var newCountries = news.Where(x => !knownUrls.Contains(x.Url)).Select(x => x.CountryCode)
@@ -195,7 +227,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 ? _service.LastApiError ?? "API не вернул новости · проверь фильтры и ключ в .env"
                 : reloadCurrentCountry
                     ? $"Обновлено: {DateTime.Now:HH:mm} · {news.Count} материалов"
-                    : $"Фоновое обновление: {DateTime.Now:HH:mm} · база пополнена на {news.Count} материалов");
+                    : $"Фоновое обновление: {DateTime.Now:HH:mm} · база пополнена на {news.Count}, удалено старых: {removed}");
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception exception)

@@ -227,6 +227,38 @@ public sealed class NewsService
             .ToList();
     }
 
+    public async Task TranslateForeignNewsAsync(IReadOnlyList<NewsArticle> articles, CancellationToken cancellationToken = default)
+    {
+        if (!_apiSettings.TranslationEnabled || string.IsNullOrWhiteSpace(_apiSettings.TranslationEndpoint)) return;
+        await Parallel.ForEachAsync(articles.Where(x => !string.Equals(x.Language, "ru", StringComparison.OrdinalIgnoreCase)),
+            new ParallelOptions { MaxDegreeOfParallelism = 2, CancellationToken = cancellationToken }, async (article, token) =>
+            {
+                var sourceLanguage = string.IsNullOrWhiteSpace(article.Language) || article.Language == "unknown" ? "en" : article.Language.Split(',')[0];
+                var title = await TranslateTextAsync(article.Title, sourceLanguage, token);
+                var description = await TranslateTextAsync(article.Description, sourceLanguage, token);
+                if (!string.IsNullOrWhiteSpace(title)) article.Title = title;
+                if (!string.IsNullOrWhiteSpace(description)) article.Description = description;
+            });
+    }
+
+    private async Task<string?> TranslateTextAsync(string text, string sourceLanguage, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return text;
+        try
+        {
+            var endpoint = $"{_apiSettings.TranslationEndpoint}?q={Uri.EscapeDataString(text[..Math.Min(text.Length, 480)])}&langpair={Uri.EscapeDataString(sourceLanguage)}%7Cru";
+            using var response = await _contentClient.GetAsync(endpoint, cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            return document.RootElement.TryGetProperty("responseData", out var data) && data.TryGetProperty("translatedText", out var translated)
+                ? translated.GetString()
+                : null;
+        }
+        catch (JsonException) { return null; }
+        catch (HttpRequestException) { return null; }
+        catch (TaskCanceledException) { return null; }
+    }
+
     private async Task<List<NewsApiItem>> FetchCountryAsync(string countryCode, CancellationToken cancellationToken)
     {
         for (var attempt = 0; attempt < 3; attempt++)
@@ -288,7 +320,10 @@ public sealed class NewsService
             CountryCode = country,
             CountryName = CountryNameFor(country),
             Title = item.Title ?? "Без заголовка",
+            OriginalTitle = item.Title ?? "Без заголовка",
             Description = item.Description ?? string.Empty,
+            OriginalDescription = item.Description ?? string.Empty,
+            Language = item.Language ?? "unknown",
             PublishedAt = publishedAt,
             ImageUrl = imageUrl
         };

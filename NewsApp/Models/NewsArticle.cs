@@ -10,8 +10,11 @@ public partial class NewsArticle : ObservableObject
     public string CountryCode { get; set; } = "WORLD";
     public string CountryName { get; set; } = "Мир";
     public string Title { get; set; } = "Без заголовка";
+    public string OriginalTitle { get; set; } = string.Empty;
     [ObservableProperty]
     private string _description = string.Empty;
+    public string OriginalDescription { get; set; } = string.Empty;
+    public string Language { get; set; } = "ru";
     public DateTimeOffset PublishedAt { get; set; } = DateTimeOffset.UtcNow;
     public string? ImageUrl { get; set; }
     public string PublishedAtText => PublishedAt.ToLocalTime().ToString("dd.MM.yyyy");

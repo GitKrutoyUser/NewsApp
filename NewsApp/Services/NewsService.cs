@@ -33,9 +33,6 @@ public sealed class NewsService
         _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         _apiSettings = NewsApiSettings.Load();
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("WorldPulse/1.0");
-        if (!string.IsNullOrWhiteSpace(_apiSettings.ApiKey))
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _apiSettings.ApiKey);
         _contentClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         _contentClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 WorldPulse/1.0");
         _contentClient.DefaultRequestHeaders.AcceptLanguage.ParseAdd("ru-RU,ru;q=0.9,en;q=0.8");
@@ -50,24 +47,12 @@ public sealed class NewsService
         var articlesFromApi = new List<NewsApiItem>();
         try
         {
-            await Parallel.ForEachAsync(WorldCountryCodes.Chunk(12), new ParallelOptions
-            {
-                MaxDegreeOfParallelism = 2,
-                CancellationToken = requestToken
-            }, async (countryCode, token) =>
-            {
-                var items = await FetchCountryAsync(string.Join(",", countryCode), token);
-                lock (articlesFromApi) articlesFromApi.AddRange(items);
-            });
+            var languageRequests = await Task.WhenAll(
+                FetchLanguageAsync("ru", _apiSettings.RussianApiKey, requestToken),
+                FetchLanguageAsync("en", _apiSettings.EnglishApiKey, requestToken));
+            foreach (var items in languageRequests) articlesFromApi.AddRange(items);
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
-
-        try
-        {
-            var russianLunarNews = await FetchRussianLunarNewsAsync(requestToken);
-            articlesFromApi.AddRange(russianLunarNews);
-        }
-        catch (OperationCanceledException) when (requestToken.IsCancellationRequested) { }
 
         var articles = articlesFromApi
             .Where(x => !string.IsNullOrWhiteSpace(x.Url))
@@ -79,6 +64,27 @@ public sealed class NewsService
             .ToList();
 
         return articles;
+    }
+
+    private async Task<List<NewsApiItem>> FetchLanguageAsync(string language, string apiKey, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(apiKey)) return new List<NewsApiItem>();
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get,
+                $"{_apiSettings.SearchEndpoint}?lang={language}&size=50&sort=date");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                LastApiError = $"API для языка {language} вернул {(int)response.StatusCode}";
+                return new List<NewsApiItem>();
+            }
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
+            return result?.Results ?? new List<NewsApiItem>();
+        }
+        catch (HttpRequestException) { return new List<NewsApiItem>(); }
     }
 
     private async Task<List<NewsApiItem>> FetchRussianLunarNewsAsync(CancellationToken cancellationToken)

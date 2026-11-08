@@ -51,6 +51,13 @@ public sealed class NewsService
                 FetchLanguageAsync("ru", _apiSettings.RussianApiKey, requestToken),
                 FetchLanguageAsync("en", _apiSettings.EnglishApiKey, requestToken));
             foreach (var items in languageRequests) articlesFromApi.AddRange(items);
+
+            try
+            {
+                articlesFromApi.AddRange(await FetchLunarNewsAsync(requestToken));
+            }
+            catch (OperationCanceledException) when (requestToken.IsCancellationRequested) { }
+            catch (HttpRequestException) { }
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested) { }
 
@@ -270,7 +277,7 @@ public sealed class NewsService
         var details = await response.Content.ReadAsStringAsync(cancellationToken);
         return response.StatusCode switch
         {
-            HttpStatusCode.Unauthorized => "API отклонил ключ (401). Проверь FREENEWSAPI_API_KEY в .env.",
+            HttpStatusCode.Unauthorized => "API отклонил ключ (401). Проверь FREENEWSAPI_API_KEY или FREENEWSAPI_RU_API_KEY/FREENEWSAPI_EN_API_KEY в .env.",
             HttpStatusCode.Forbidden => "API запретил доступ (403). Проверь тариф или ключ.",
             _ => $"API вернул {(int)response.StatusCode}: {details[..Math.Min(details.Length, 120)]}"
         };
@@ -357,7 +364,13 @@ public sealed class NewsService
         try
         {
             var endpoint = $"{_apiSettings.ArticleEndpoint}?url={Uri.EscapeDataString(articleUrl)}&full_text=true";
-            using var response = await _httpClient.GetAsync(endpoint, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+            var apiKey = string.IsNullOrWhiteSpace(_apiSettings.ApiKey)
+                ? _apiSettings.RussianApiKey
+                : _apiSettings.ApiKey;
+            if (!string.IsNullOrWhiteSpace(apiKey))
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode) return null;
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);

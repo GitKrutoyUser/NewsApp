@@ -11,6 +11,8 @@ namespace NewsApp.Services;
 public sealed class NewsService
 {
     public TimeSpan ManualRefreshInterval => TimeSpan.FromMinutes(_apiSettings.ManualRefreshMinutes);
+    private static readonly HashSet<string> RussianNewsCountries = new(StringComparer.OrdinalIgnoreCase)
+        { "RU", "UA", "BY", "KZ", "KG", "LV" };
     private const int MaxImageBytes = 10 * 1024 * 1024;
     private const int MaxHtmlBytes = 5 * 1024 * 1024;
     private const string LunarFeedUrl = "https://www.nasa.gov/missions/artemis/feed/";
@@ -79,6 +81,37 @@ public sealed class NewsService
         return articles;
     }
 
+    public async Task<IReadOnlyList<NewsArticle>> FetchCountryNewsAsync(
+        string countryCode,
+        CancellationToken cancellationToken = default)
+    {
+        var code = countryCode.Trim().ToUpperInvariant();
+        if (code.Length != 2) return Array.Empty<NewsArticle>();
+
+        var language = RussianNewsCountries.Contains(code) ? "ru" : "en";
+        var apiKey = language == "ru" ? _apiSettings.RussianApiKey : _apiSettings.EnglishApiKey;
+        if (string.IsNullOrWhiteSpace(apiKey)) return Array.Empty<NewsArticle>();
+
+        var items = await FetchCountryPageAsync(language, code, apiKey, "24h", cancellationToken);
+        if (items.Count < 5)
+        {
+            var olderItems = await FetchCountryPageAsync(language, code, apiKey, "7d", cancellationToken);
+            items = items.Concat(olderItems)
+                .Where(x => !string.IsNullOrWhiteSpace(x.Url))
+                .GroupBy(x => x.Url, StringComparer.OrdinalIgnoreCase)
+                .Select(x => x.First())
+                .ToList();
+        }
+
+        foreach (var item in items)
+            item.Country = code;
+
+        return items.Select(ToArticle)
+            .Where(x => x is not null && !string.IsNullOrWhiteSpace(x.Description))
+            .Cast<NewsArticle>()
+            .ToList();
+    }
+
     private async Task<List<NewsApiItem>> FetchLanguageAsync(string language, string apiKey, int offset, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(apiKey)) return new List<NewsApiItem>();
@@ -93,6 +126,27 @@ public sealed class NewsService
                 LastApiError = $"API для языка {language} вернул {(int)response.StatusCode}";
                 return new List<NewsApiItem>();
             }
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
+            return result?.Results ?? new List<NewsApiItem>();
+        }
+        catch (HttpRequestException) { return new List<NewsApiItem>(); }
+    }
+
+    private async Task<List<NewsApiItem>> FetchCountryPageAsync(
+        string language,
+        string country,
+        string apiKey,
+        string date,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var endpoint = $"{_apiSettings.SearchEndpoint}?lang={language}&country={country}&date={date}&size=100&sort=date";
+            using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode) return new List<NewsApiItem>();
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
             return result?.Results ?? new List<NewsApiItem>();

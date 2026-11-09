@@ -33,6 +33,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         new Country("FR", "Франция", "🇫🇷"),
         new Country("GB", "Великобритания", "🇬🇧"),
         new Country("CN", "Китай", "🇨🇳"),
+        new Country("KZ", "Казахстан", "🇰🇿"),
+        new Country("PH", "Филиппины", "🇵🇭"),
+        new Country("GL", "Гренландия", "🇬🇱"),
 
         new Country("JP", "Япония", "🇯🇵"),
         new Country("IN", "Индия", "🇮🇳"),
@@ -331,6 +334,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         try
         {
             var items = await Task.Run(() => _repository.GetNewsByCountry(countryCode, NewsPageSize, 0), _lifetime.Token);
+            if (countryCode is not ("WORLD" or "MOON") && items.Count < 5)
+            {
+                await SetUiAsync(() => StatusText = $"Ищем новости для {SelectedCountry.Name}…");
+                var countryNews = await _service.FetchCountryNewsAsync(countryCode, _lifetime.Token);
+                if (countryNews.Count > 0)
+                {
+                    await Task.Run(() => _repository.SaveNews(countryNews), _lifetime.Token);
+                    items = await Task.Run(() => _repository.GetNewsByCountry(countryCode, NewsPageSize, 0), _lifetime.Token);
+                }
+            }
             _newsOffset = items.Count;
             _hasMoreNews = items.Count == NewsPageSize;
             await SetUiAsync(() =>

@@ -357,7 +357,7 @@ public sealed class GlobeControl : Control
     }
 
     private static bool IsMajorLabelCountry(CountryShape country) => country.Code.ToUpperInvariant() is
-        "RU" or "CN" or "US" or "AU" or "IN" or "KZ" or "BR";
+        "RU" or "CN" or "US" or "AU" or "IN" or "KZ" or "BR" or "PH" or "GL";
 
     private static double PolygonAreaScore(List<Point> polygon)
     {
@@ -405,7 +405,8 @@ public sealed class GlobeControl : Control
         "CN" => "Китай", "JP" => "Япония", "IN" => "Индия", "BR" => "Бразилия", "CA" => "Канада",
         "AU" => "Австралия", "IT" => "Италия", "ES" => "Испания", "TR" => "Турция", "KR" => "Корея",
         "MX" => "Мексика", "PL" => "Польша", "NL" => "Нидерланды", "SE" => "Швеция", "CH" => "Швейцария",
-        "IL" => "Израиль", "UA" => "Украина", "ZA" => "ЮАР", _ => fallback
+        "IL" => "Израиль", "UA" => "Украина", "ZA" => "ЮАР", "PH" => "Филиппины",
+        "GL" => "Гренландия", "KZ" => "Казахстан", _ => fallback
     };
 
     private void DrawEarthSurface(DrawingContext context, Point center, double radius)

@@ -10,6 +10,7 @@ namespace NewsApp.Services;
 
 public sealed class NewsService
 {
+    public TimeSpan ManualRefreshInterval => TimeSpan.FromMinutes(_apiSettings.ManualRefreshMinutes);
     private const int MaxImageBytes = 10 * 1024 * 1024;
     private const int MaxHtmlBytes = 5 * 1024 * 1024;
     private const string LunarFeedUrl = "https://www.nasa.gov/missions/artemis/feed/";

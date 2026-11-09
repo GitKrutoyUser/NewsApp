@@ -11,6 +11,7 @@ public sealed class NewsApiSettings
     public string EnglishApiKey { get; init; } = string.Empty;
     public int NewsPagesPerLanguage { get; init; } = 3;
     public int NewsPageSize { get; init; } = 100;
+    public int ManualRefreshMinutes { get; init; } = 20;
 
     public string SearchEndpoint => BuildEndpoint(SearchPath);
     public string ArticleEndpoint => BuildEndpoint(ArticlePath);
@@ -28,7 +29,8 @@ public sealed class NewsApiSettings
             RussianApiKey = Read("FREENEWSAPI_RU_API_KEY", Read("FREENEWSAPI_API_KEY", string.Empty)),
             EnglishApiKey = Read("FREENEWSAPI_EN_API_KEY", Read("FREENEWSAPI_API_KEY", string.Empty)),
             NewsPagesPerLanguage = ReadInt("FREENEWSAPI_PAGES_PER_LANGUAGE", 3, 1, 3),
-            NewsPageSize = ReadInt("FREENEWSAPI_PAGE_SIZE", 100, 1, 100)
+            NewsPageSize = ReadInt("FREENEWSAPI_PAGE_SIZE", 100, 1, 100),
+            ManualRefreshMinutes = ReadInt("FREENEWSAPI_MANUAL_REFRESH_MINUTES", 20, 0, 1440)
         };
     }
 

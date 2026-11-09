@@ -12,7 +12,6 @@ namespace NewsApp.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     private static readonly TimeSpan MinimumApiInterval = TimeSpan.FromHours(1);
-    private static readonly TimeSpan MinimumManualInterval = TimeSpan.FromMinutes(20);
     public event EventHandler<IReadOnlySet<string>>? NewCountriesChanged;
     private readonly NewsRepository _repository;
     private readonly NewsService _service;
@@ -198,16 +197,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         if (!await _refreshGate.WaitAsync(0)) return;
         try
         {
+            var minimumManualInterval = _service.ManualRefreshInterval;
             var hasAnyNews = await Task.Run(() => _repository.HasAnyNews(), _lifetime.Token);
             var lastSync = await Task.Run(() => _repository.GetLastApiSync(), _lifetime.Token);
             if (hasAnyNews && lastSync is not null)
             {
-                var minimumInterval = manual ? MinimumManualInterval : MinimumApiInterval;
+                var minimumInterval = manual ? minimumManualInterval : MinimumApiInterval;
                 if (DateTimeOffset.UtcNow - lastSync.Value < minimumInterval)
                 {
                 var next = lastSync.Value.Add(MinimumApiInterval).ToLocalTime();
                     if (manual)
-                        await SetUiAsync(() => StatusText = $"Ручное обновление доступно после {lastSync.Value.Add(MinimumManualInterval).ToLocalTime():HH:mm}");
+                        await SetUiAsync(() => StatusText = $"Ручное обновление доступно после {lastSync.Value.Add(minimumManualInterval).ToLocalTime():HH:mm}");
                     return;
                 }
             }

@@ -12,7 +12,7 @@ namespace NewsApp.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     private static readonly TimeSpan MinimumApiInterval = TimeSpan.FromHours(1);
-    private static readonly TimeSpan MinimumManualInterval = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan MinimumManualInterval = TimeSpan.FromMinutes(20);
     public event EventHandler<IReadOnlySet<string>>? NewCountriesChanged;
     private readonly NewsRepository _repository;
     private readonly NewsService _service;

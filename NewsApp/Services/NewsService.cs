@@ -51,8 +51,10 @@ public sealed class NewsService
             {
                 FetchLanguageAsync("ru", _apiSettings.RussianApiKey, 0, requestToken),
                 FetchLanguageAsync("ru", _apiSettings.RussianApiKey, 100, requestToken),
+                FetchLanguageAsync("ru", _apiSettings.RussianApiKey, 200, requestToken),
                 FetchLanguageAsync("en", _apiSettings.EnglishApiKey, 0, requestToken),
-                FetchLanguageAsync("en", _apiSettings.EnglishApiKey, 100, requestToken)
+                FetchLanguageAsync("en", _apiSettings.EnglishApiKey, 100, requestToken),
+                FetchLanguageAsync("en", _apiSettings.EnglishApiKey, 200, requestToken)
             };
             var responses = await Task.WhenAll(requests);
             foreach (var items in responses) articlesFromApi.AddRange(items);

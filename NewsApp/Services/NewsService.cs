@@ -10,10 +10,6 @@ namespace NewsApp.Services;
 
 public sealed class NewsService
 {
-    private static readonly string[] RussianCountryCodes =
-        { "RU", "UA", "BY", "KZ", "LV" };
-    private static readonly string[] EnglishCountryCodes =
-        { "US", "GB", "DE", "FR", "CN", "JP", "IN", "BR", "CA", "AU", "IT", "ES", "TR", "KR", "MX", "PL", "NL", "SE", "CH", "IL", "ZA", "NZ", "PH", "SG" };
     private const int MaxImageBytes = 10 * 1024 * 1024;
     private const int MaxHtmlBytes = 5 * 1024 * 1024;
     private const string LunarFeedUrl = "https://www.nasa.gov/missions/artemis/feed/";
@@ -54,14 +50,10 @@ public sealed class NewsService
             var requests = new List<Task<List<NewsApiItem>>>
             {
                 FetchLanguageAsync("ru", _apiSettings.RussianApiKey, 0, requestToken),
-                FetchLanguageAsync("ru", _apiSettings.RussianApiKey, 50, requestToken),
+                FetchLanguageAsync("ru", _apiSettings.RussianApiKey, 100, requestToken),
                 FetchLanguageAsync("en", _apiSettings.EnglishApiKey, 0, requestToken),
-                FetchLanguageAsync("en", _apiSettings.EnglishApiKey, 50, requestToken)
+                FetchLanguageAsync("en", _apiSettings.EnglishApiKey, 100, requestToken)
             };
-            requests.AddRange(RussianCountryCodes.Select(country =>
-                FetchCountryLanguageAsync("ru", country, _apiSettings.RussianApiKey, requestToken)));
-            requests.AddRange(EnglishCountryCodes.Select(country =>
-                FetchCountryLanguageAsync("en", country, _apiSettings.EnglishApiKey, requestToken)));
             var responses = await Task.WhenAll(requests);
             foreach (var items in responses) articlesFromApi.AddRange(items);
 
@@ -92,37 +84,12 @@ public sealed class NewsService
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get,
-                $"{_apiSettings.SearchEndpoint}?lang={language}&size=50&offset={offset}&sort=date");
+                $"{_apiSettings.SearchEndpoint}?lang={language}&date=24h&size=100&offset={offset}&sort=date");
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
             using var response = await _httpClient.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 LastApiError = $"API для языка {language} вернул {(int)response.StatusCode}";
-                return new List<NewsApiItem>();
-            }
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var result = await JsonSerializer.DeserializeAsync<NewsApiResponse>(stream, cancellationToken: cancellationToken);
-            return result?.Results ?? new List<NewsApiItem>();
-        }
-        catch (HttpRequestException) { return new List<NewsApiItem>(); }
-    }
-
-    private async Task<List<NewsApiItem>> FetchCountryLanguageAsync(
-        string language,
-        string country,
-        string apiKey,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(apiKey)) return new List<NewsApiItem>();
-        try
-        {
-            var endpoint = $"{_apiSettings.SearchEndpoint}?lang={language}&country={country}&size=10&sort=date";
-            using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                LastApiError = $"API для {language}/{country} вернул {(int)response.StatusCode}";
                 return new List<NewsApiItem>();
             }
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);

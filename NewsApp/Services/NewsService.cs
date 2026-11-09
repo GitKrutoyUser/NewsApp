@@ -47,15 +47,13 @@ public sealed class NewsService
         var articlesFromApi = new List<NewsApiItem>();
         try
         {
-            var requests = new List<Task<List<NewsApiItem>>>
+            var requests = new List<Task<List<NewsApiItem>>>();
+            for (var page = 0; page < _apiSettings.NewsPagesPerLanguage; page++)
             {
-                FetchLanguageAsync("ru", _apiSettings.RussianApiKey, 0, requestToken),
-                FetchLanguageAsync("ru", _apiSettings.RussianApiKey, 100, requestToken),
-                FetchLanguageAsync("ru", _apiSettings.RussianApiKey, 200, requestToken),
-                FetchLanguageAsync("en", _apiSettings.EnglishApiKey, 0, requestToken),
-                FetchLanguageAsync("en", _apiSettings.EnglishApiKey, 100, requestToken),
-                FetchLanguageAsync("en", _apiSettings.EnglishApiKey, 200, requestToken)
-            };
+                var offset = page * _apiSettings.NewsPageSize;
+                requests.Add(FetchLanguageAsync("ru", _apiSettings.RussianApiKey, offset, requestToken));
+                requests.Add(FetchLanguageAsync("en", _apiSettings.EnglishApiKey, offset, requestToken));
+            }
             var responses = await Task.WhenAll(requests);
             foreach (var items in responses) articlesFromApi.AddRange(items);
 
@@ -86,7 +84,7 @@ public sealed class NewsService
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get,
-                $"{_apiSettings.SearchEndpoint}?lang={language}&date=24h&size=100&offset={offset}&sort=date");
+                $"{_apiSettings.SearchEndpoint}?lang={language}&date=24h&size={_apiSettings.NewsPageSize}&offset={offset}&sort=date");
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
             using var response = await _httpClient.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)

@@ -9,6 +9,8 @@ public sealed class NewsApiSettings
     public string ApiKey { get; init; } = string.Empty;
     public string RussianApiKey { get; init; } = string.Empty;
     public string EnglishApiKey { get; init; } = string.Empty;
+    public int NewsPagesPerLanguage { get; init; } = 3;
+    public int NewsPageSize { get; init; } = 100;
 
     public string SearchEndpoint => BuildEndpoint(SearchPath);
     public string ArticleEndpoint => BuildEndpoint(ArticlePath);
@@ -24,7 +26,9 @@ public sealed class NewsApiSettings
             Language = Read("FREENEWSAPI_LANG", "ru,en"),
             ApiKey = Read("FREENEWSAPI_API_KEY", string.Empty),
             RussianApiKey = Read("FREENEWSAPI_RU_API_KEY", Read("FREENEWSAPI_API_KEY", string.Empty)),
-            EnglishApiKey = Read("FREENEWSAPI_EN_API_KEY", Read("FREENEWSAPI_API_KEY", string.Empty))
+            EnglishApiKey = Read("FREENEWSAPI_EN_API_KEY", Read("FREENEWSAPI_API_KEY", string.Empty)),
+            NewsPagesPerLanguage = ReadInt("FREENEWSAPI_PAGES_PER_LANGUAGE", 3, 1, 3),
+            NewsPageSize = ReadInt("FREENEWSAPI_PAGE_SIZE", 100, 1, 100)
         };
     }
 
@@ -35,6 +39,13 @@ public sealed class NewsApiSettings
     {
         var value = Environment.GetEnvironmentVariable(name);
         return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+    }
+
+    private static int ReadInt(string name, int fallback, int minimum, int maximum)
+    {
+        return int.TryParse(Read(name, fallback.ToString()), out var value)
+            ? Math.Clamp(value, minimum, maximum)
+            : fallback;
     }
 
     private static void LoadDotEnv()

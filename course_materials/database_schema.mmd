@@ -1,0 +1,36 @@
+%% WorldPulse — физическая схема SQLite
+flowchart LR
+    API[FreeNewsAPI\n/v1/search\n3 страницы ru + 3 страницы en\ncountry fallback 24h/7d] --> NORMALIZE[Нормализация\nURL / country / language / dates]
+    NORMALIZE --> UPSERT[SQLite UPSERT\nдедупликация по URL]
+    UPSERT --> NEWS[(news)]
+    APP[Приложение] --> READ[Постраничное чтение\ncountry_code + published_at]
+    SELECT[Выбор страны\nдогрузка при < 5 статей] --> API
+    READ --> NEWS
+    NEWS --> IDX1[[ix_news_country_published<br/>country_code + published_at DESC]]
+    NEWS --> IDX2[[ix_news_title<br/>title COLLATE NOCASE]]
+    SYNC[Фоновая синхронизация\nраз в час] --> STATE[(app_state)]
+    STATE --> LAST[Последняя синхронизация\nstate_key / state_value]
+    CLEAN[Очистка старше 30 дней\nи пустых описаний] --> NEWS
+
+    subgraph NEWS_TABLE[Таблица news — одна строка = одна статья]
+      N1[url TEXT PRIMARY KEY]
+      N2[country_code TEXT NOT NULL]
+      N3[country_name TEXT NOT NULL]
+      N4[title TEXT NOT NULL]
+      N5[description TEXT NOT NULL]
+      N6[original_title TEXT NOT NULL DEFAULT '']
+      N7[original_description TEXT NOT NULL DEFAULT '']
+      N8[language TEXT NOT NULL DEFAULT 'ru']
+      N9[published_at TEXT NOT NULL]
+      N10[image_url TEXT NULL]
+    end
+
+    subgraph STATE_TABLE[Таблица app_state — служебное состояние]
+      S1[state_key TEXT PRIMARY KEY]
+      S2[state_value TEXT NOT NULL]
+    end
+
+    classDef table fill:#172536,stroke:#7ebcff,color:#f4f8ff,stroke-width:2px
+    classDef process fill:#1b2b3c,stroke:#67d3b2,color:#f4f8ff
+    class NEWS,STATE,NEWS_TABLE,STATE_TABLE table
+    class NORMALIZE,UPSERT,READ,CLEAN,LAST process

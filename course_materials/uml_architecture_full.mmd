@@ -1,0 +1,169 @@
+%% WorldPulse — полная UML-диаграмма курсового проекта
+classDiagram
+    direction LR
+
+    class App {
+        +Initialize()
+        +OnFrameworkInitializationCompleted()
+    }
+    class Program {
+        +Main(string[] args)
+    }
+    class MainWindow {
+        -MainWindowViewModel _viewModel
+        -DispatcherTimer _refreshAnimationTimer
+        -DispatcherTimer _paneAnimationTimer
+        +InitializeComponent()
+        +OnCountrySelected()
+        +OnArticleScrollToTop()
+        +AnimateNewsPane()
+    }
+    class MainWindowViewModel {
+        +ObservableCollection~Country~ Countries
+        +ObservableCollection~NewsArticle~ Articles
+        +Country SelectedCountry
+        +bool IsRefreshing
+        +bool IsLoading
+        +bool IsNewsPaneVisible
+        +string SearchText
+        +NewsArticle OpenedArticle
+        +RefreshAsync()
+        +LoadCacheAsync()
+        +LoadCountryNewsAsync(string)
+        +OpenArticleAsync(NewsArticle)
+        +CloseArticle()
+        +LoadMoreNewsAsync()
+        +SelectCountryCode(string)
+        +Dispose()
+    }
+    class GlobeControl {
+        +event CountrySelected
+        +FocusEarth()
+        +FocusMoon()
+        +ToggleAutoRotation()
+        +StopAutoRotation()
+        +OnPointerPressed()
+        +OnPointerMoved()
+        +Render(DrawingContext)
+        -ProjectGeoCoordinate()
+        -SelectCountryAtPoint()
+    }
+    class StarfieldControl {
+        +Render(DrawingContext)
+        +OnSizeChanged()
+    }
+    class NewsService {
+        -HttpClient _httpClient
+        -HttpClient _contentClient
+        +FetchNewsAsync()
+        +FetchCountryNewsAsync(string)
+        +DownloadArticleAsync(string)
+        +LoadImageAsync(string)
+        +LastApiError
+        -FetchLanguageAsync(string, string)
+        -FetchCountryPageAsync(string, string, string, string)
+        -ToArticle(NewsApiItem)
+        -TryGetOgImageAsync(string)
+    }
+    class NewsRepository {
+        -string _connectionString
+        +SaveNews(IEnumerable~NewsArticle~)
+        +GetNewsByCountry(string, int, int)
+        +GetKnownUrls()
+        +SetLastApiSync(DateTimeOffset)
+        +GetLastApiSync()
+        +DeleteNewsOlderThan(TimeSpan)
+        +DeleteNewsByCountry(string)
+    }
+    class NewsApiSettings {
+        +string BaseUrl
+        +string SearchPath
+        +string ArticlePath
+        +string RussianApiKey
+        +string EnglishApiKey
+        +int NewsPageSize
+        +int NewsPagesPerLanguage
+        +int ManualRefreshMinutes
+        +string SearchEndpoint
+        +string ArticleEndpoint
+        +Load()
+    }
+    class NewsArticle {
+        +string Url
+        +string CountryCode
+        +string CountryName
+        +string Title
+        +string Description
+        +string Language
+        +DateTimeOffset PublishedAt
+        +string ImageUrl
+        +Bitmap ImageBitmap
+        +bool HasImage
+    }
+    class Country {
+        +string Code
+        +string Name
+        +string Flag
+        +bool HasNewNews
+    }
+    class NewsApiItem {
+        +string Url
+        +string Title
+        +string Description
+        +string PublishedAt
+        +string Country
+        +string Language
+        +string ImageUrl
+    }
+    class ArticleContent {
+        +List~string~ Paragraphs
+        +List~string~ ImageUrls
+    }
+    class SQLiteDatabase {
+        +news
+        +app_state
+        +WAL mode
+        +Indexes
+    }
+    class FreeNewsAPI {
+        +GET /v1/search lang=ru date=24h pages
+        +GET /v1/search lang=en date=24h pages
+        +GET /v1/search country-specific
+        +Fallback country date=7d
+        +GET /v1/article
+    }
+    class NewsWebPages {
+        +OpenGraph image
+        +HTML article fallback
+    }
+    class NASA_RSS {
+        +Artemis feed
+        +Moon news
+    }
+    class GeoAssets {
+        +countries.geojson
+        +earth-countries.png
+        +moon texture
+    }
+
+    Program --> App : starts
+    App --> MainWindow : creates
+    MainWindow --> MainWindowViewModel : DataContext
+    MainWindow --> GlobeControl : hosts
+    MainWindow --> StarfieldControl : hosts
+    MainWindowViewModel --> NewsService : requests data
+    MainWindowViewModel --> NewsRepository : reads/writes cache
+    MainWindowViewModel --> NewsArticle : displays
+    MainWindowViewModel --> Country : selects
+    GlobeControl --> MainWindowViewModel : CountrySelected event
+    GlobeControl --> GeoAssets : loads map data
+    NewsService --> NewsApiSettings : reads .env
+    NewsService --> FreeNewsAPI : REST requests
+    NewsService --> NewsWebPages : article/image fallback
+    NewsService --> NASA_RSS : moon feed
+    NewsService --> NewsApiItem : deserializes
+    NewsService --> NewsArticle : maps DTO
+    NewsService --> ArticleContent : full article
+    NewsRepository --> SQLiteDatabase : SQL / WAL
+    SQLiteDatabase --> NewsArticle : persists
+    MainWindowViewModel ..> MainWindow : property notifications

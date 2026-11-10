@@ -1,0 +1,24 @@
+%% WorldPulse — актуальная ER-диаграмма
+%% Основано на NewsRepository.InitializeDatabase()
+erDiagram
+    NEWS {
+        TEXT url PK "Уникальный URL статьи"
+        TEXT country_code "ISO-код страны или WORLD/MOON"
+        TEXT country_name "Название страны или раздела"
+        TEXT title "Заголовок для отображения"
+        TEXT description "Описание, обязательное поле"
+        TEXT original_title "Исходный заголовок"
+        TEXT original_description "Исходное описание"
+        TEXT language "Язык оригинала, например ru/en"
+        TEXT published_at "Дата и время публикации ISO-8601"
+        TEXT image_url "URL изображения, nullable"
+    }
+
+    APP_STATE {
+        TEXT state_key PK "Имя состояния приложения"
+        TEXT state_value "Значение состояния"
+    }
+
+    %% Физической связи NEWS с APP_STATE нет.
+    %% APP_STATE хранит служебные значения приложения,
+    %% например время последней синхронизации.
